@@ -1,0 +1,17 @@
+{
+  "name": "asset-management",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter backend dev\" \"pnpm --filter frontend dev\"",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm --filter backend build && pnpm --filter frontend build",
+    "test": "pnpm --filter backend test && pnpm --filter frontend test:unit",
+    "db:migrate": "pnpm --filter backend db:migrate",
+    "db:seed": "pnpm --filter backend db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
