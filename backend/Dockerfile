@@ -1,39 +1,38 @@
+# Build context: repo root  →  docker build -f backend/Dockerfile .
+#
 # ── Stage 1: Install dependencies ─────────────────────────────────────────────
 FROM node:22-alpine AS deps
-RUN npm install -g pnpm
+RUN npm install -g pnpm@10.32.1
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
 
-# ── Stage 2: Build TypeScript ─────────────────────────────────────────────────
+# Copy root workspace manifest so pnpm can resolve the workspace
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Copy backend package.json for dependency resolution
+COPY backend/package.json ./backend/
+RUN pnpm install --frozen-lockfile --filter asset-management-backend
+
+# ── Stage 2: Build TypeScript ──────────────────────────────────────────────────
 FROM deps AS builder
-COPY . .
-# Generate Prisma Client before compiling TypeScript
-RUN pnpm db:generate
-RUN pnpm build
+COPY backend/ ./backend/
+WORKDIR /app/backend
+RUN pnpm db:generate && pnpm build
 
 # ── Stage 3: Production image ──────────────────────────────────────────────────
 FROM node:22-alpine AS runner
-RUN npm install -g pnpm
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Install production-only dependencies
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod
+# Copy compiled app and all node_modules (includes Prisma client)
+COPY --from=builder /app/backend/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/backend/node_modules ./backend_modules
 
-# Copy Prisma schema + generated client
-COPY prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Copy Prisma schema for migrate deploy at startup
+COPY backend/prisma ./prisma
 
-# Copy compiled app
-COPY --from=builder /app/dist ./dist
-
-# Create uploads dir (only used when STORAGE_DRIVER=local)
+# Create uploads dir (used when STORAGE_DRIVER=local)
 RUN mkdir -p uploads
 
 EXPOSE 3000
 
-# Run DB migrations then start server
-# On Cloud Run migrations run fast (idempotent); only pending ones are applied.
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/index.js"]

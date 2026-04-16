@@ -7,7 +7,7 @@
           <el-icon size="28" color="#fff"><Box /></el-icon>
         </div>
         <h1 class="product-name">AssetHub</h1>
-        <p class="product-tagline">企業資產借用・領用管理平台</p>
+        <p class="product-tagline">企業資產管理・維修追蹤平台</p>
 
         <ul class="feature-list">
           <li v-for="f in features" :key="f">
@@ -124,10 +124,10 @@ const locales: { value: LocaleName; label: string }[] = [
 ]
 
 const features = [
-  '資產借用與領用申請',
-  '多層次審核流程',
-  '即時通知與逾期提醒',
-  '完整稽核日誌',
+  '資產台帳管理與追蹤',
+  '維修申請與審核流程',
+  '即時通知與狀態提醒',
+  '圖片記錄與雲端存儲',
 ]
 
 async function handleLogin() {
