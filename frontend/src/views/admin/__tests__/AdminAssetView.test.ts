@@ -74,31 +74,17 @@ describe('AdminAssetView', () => {
     expect(titleEl).toBeTruthy()
   })
 
-  it('calls assetApi.create and re-fetches when form is saved', async () => {
+  it('create dialog opens and shows correct title', async () => {
     mockListSuccess()
-    vi.mocked(assetApi.create).mockResolvedValue({ data: makeAsset() } as never)
-
     const wrapper = mountWithPlugins(AdminAssetView)
     await flushPromises()
 
-    // Open create dialog
     const createBtn = wrapper.findAll('button').find((b) => b.text().includes('新增資產'))
     await createBtn!.trigger('click')
 
-    vi.clearAllMocks()
-    mockListSuccess()
-
-    // Click save — el-form validation is stubbed so it won't run
-    // The save button text is the i18n key 'common.save' since test messages are empty
-    const saveBtn = wrapper
-      .findAll('button')
-      .find((b) => b.text() === '儲存' || b.text().includes('common.save'))
-    if (saveBtn) {
-      await saveBtn.trigger('click')
-      await flushPromises()
-      // create may not fire if form validation blocks it (stub FormInstance)
-    }
-    expect(wrapper.exists()).toBe(true)
+    // After clicking, editingId is null so dialog title should be "新增資產"
+    const titleEl = wrapper.findAll('.dialog-title').find((d) => d.text().includes('新增資產'))
+    expect(titleEl).toBeTruthy()
   })
 
   // ── Dialog DOM (el-dialog stub always renders content) ────────────────────

@@ -7,7 +7,7 @@
  *  - makeApplication()   — factory for Application fixtures
  */
 
-import { mount, type MountingOptions } from '@vue/test-utils'
+import { mount, type VueWrapper } from '@vue/test-utils'
 import { createTestingPinia, type TestingOptions } from '@pinia/testing'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { createI18n } from 'vue-i18n'
@@ -86,16 +86,20 @@ export function mountWithPlugins(
   component: Component,
   options: {
     piniaOptions?: TestingOptions
-    mountOptions?: MountingOptions<Record<string, unknown>>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mountOptions?: Record<string, any>
   } = {},
-) {
+): VueWrapper {
   const pinia = createTestingPinia({
     createSpy: vi.fn,
     stubActions: false, // let actions run so we can verify side-effects
     ...options.piniaOptions,
   })
 
-  return mount(component as Parameters<typeof mount>[0], {
+  // Cast required: vue-test-utils ComponentMountingOptions is generic on the
+  // component type, which is lost when component is typed as Component.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (mount as any)(component, {
     global: {
       plugins: [pinia, makeRouter(), makeI18n()],
       stubs: { ...EP_STUBS, 'el-message': true, StatusBadge: true, ImageUploader: true },
