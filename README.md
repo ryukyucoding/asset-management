@@ -187,6 +187,103 @@ pnpm db:generate
 
 ---
 
+## 部署（GCP Cloud Run）
+
+### 前置需求
+
+```bash
+# 安裝 gcloud CLI 並登入
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+```
+
+### 架構說明
+
+| 角色 | 說明 |
+|------|------|
+| `docker-compose.yml` | **本地開發用** — 只啟動 PostgreSQL + Redis，應用程式跑在本機 |
+| `backend/Dockerfile` | 打包 Backend（Node.js + Prisma）成 container image |
+| `frontend/Dockerfile` | 打包 Frontend（Vue build → Nginx）成 container image |
+
+Cloud Run 的 Zero Downtime 流程：
+```
+git push → CI build image → push 到 Artifact Registry
+→ Cloud Run 啟動新 revision（舊的繼續服務）
+→ /health 回 200 → 流量切到新 revision → 舊的 scale to 0
+```
+
+### 本地測試 Docker image（部署前驗證）
+
+```bash
+# Backend
+docker build -t asset-backend ./backend
+docker run -p 3000:3000 \
+  -e DATABASE_URL="postgresql://..." \
+  -e JWT_SECRET="..." \
+  -e STORAGE_DRIVER="local" \
+  asset-backend
+
+# Frontend（VITE_API_URL 在 build 時燒進 JS bundle）
+docker build \
+  --build-arg VITE_API_URL=http://localhost:3000 \
+  -t asset-frontend ./frontend
+docker run -p 8080:80 asset-frontend
+```
+
+### 部署到 Cloud Run
+
+```bash
+PROJECT_ID="your-gcp-project-id"
+REGION="asia-east1"
+BACKEND_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/asset-mgmt/backend"
+FRONTEND_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/asset-mgmt/frontend"
+BACKEND_URL="https://asset-backend-xxxx-de.a.run.app"   # 第一次部署後取得
+
+# 1. 建立 Artifact Registry
+gcloud artifacts repositories create asset-mgmt \
+  --repository-format=docker --location=$REGION
+
+# 2. Build & push backend
+docker build -t $BACKEND_IMAGE ./backend
+docker push $BACKEND_IMAGE
+
+# 3. Build & push frontend（帶入 backend URL）
+docker build \
+  --build-arg VITE_API_URL=$BACKEND_URL \
+  -t $FRONTEND_IMAGE ./frontend
+docker push $FRONTEND_IMAGE
+
+# 4. Deploy backend
+gcloud run deploy asset-backend \
+  --image=$BACKEND_IMAGE \
+  --region=$REGION \
+  --platform=managed \
+  --allow-unauthenticated \
+  --min-instances=1 \
+  --set-env-vars="DATABASE_URL=postgresql://...,JWT_SECRET=...,STORAGE_DRIVER=gcs,GCS_BUCKET_NAME=..."
+
+# 5. Deploy frontend
+gcloud run deploy asset-frontend \
+  --image=$FRONTEND_IMAGE \
+  --region=$REGION \
+  --platform=managed \
+  --allow-unauthenticated \
+  --min-instances=1
+```
+
+> `--min-instances=1` 可避免冷啟動，確保 Zero Downtime。每次重新部署 Cloud Run 會先啟動新 revision 確認健康後再切流量。
+
+### Zero Downtime 關鍵設定
+
+| 設定 | 說明 |
+|------|------|
+| `GET /health` | Health check endpoint，DB 連線正常才回 200 |
+| `--min-instances=1` | 至少保留一個 instance，避免 cold start 造成短暫無法服務 |
+| `CMD prisma migrate deploy` | Container 啟動時自動套用 pending migrations（idempotent） |
+| Cloud Run traffic splitting | 部署時舊 revision 繼續跑，新的通過 health check 才切流量 |
+
+---
+
 ## 圖片上傳
 
 ### 本地開發（預設）

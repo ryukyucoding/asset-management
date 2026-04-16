@@ -22,6 +22,7 @@ export const RepairDetailsDTO = z.object({
 export const ApplicationQueryDTO = z.object({
   status:  z.enum(['PENDING', 'IN_REPAIR', 'COMPLETED', 'REJECTED']).optional(),
   assetId: z.string().optional(),
+  userId:  z.string().optional(),
   page:    z.coerce.number().int().positive().default(1),
   limit:   z.coerce.number().int().positive().max(100).default(20),
 });

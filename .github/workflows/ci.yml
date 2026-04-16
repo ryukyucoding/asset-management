@@ -7,6 +7,7 @@ on:
     branches: [main]
 
 jobs:
+  # ── Backend: test + build ────────────────────────────────────────────────────
   backend:
     runs-on: ubuntu-latest
     services:
@@ -49,7 +50,14 @@ jobs:
           cache-dependency-path: backend/pnpm-lock.yaml
 
       - run: pnpm install
+
+      # Generate Prisma client types
       - run: pnpm db:generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/asset_management_test
+
+      # Apply migrations so the test DB has the correct schema
+      - run: pnpm db:migrate:prod
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/asset_management_test
 
@@ -59,9 +67,12 @@ jobs:
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret
           JWT_REFRESH_SECRET: test-refresh-secret
+          STORAGE_DRIVER: local
+          BASE_URL: http://localhost:3000
 
       - run: pnpm build
 
+  # ── Frontend: type-check + test + build ──────────────────────────────────────
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -83,3 +94,24 @@ jobs:
       - run: pnpm type-check
       - run: pnpm test:unit
       - run: pnpm build
+        env:
+          VITE_API_URL: http://localhost:3000
+
+  # ── Docker: verify both images build successfully ────────────────────────────
+  docker-build:
+    runs-on: ubuntu-latest
+    # Only run on pushes to main (skip on every PR to save CI minutes)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [backend, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t asset-backend ./backend
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            --build-arg VITE_API_URL=http://localhost:3000 \
+            -t asset-frontend ./frontend
