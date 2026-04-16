@@ -17,6 +17,7 @@ export interface AssetEntity {
   status: AssetStatus;
   holderId: string | null;
   description: string | null;
+  imageUrls: string[];
   createdAt: Date;
   updatedAt: Date;
 }

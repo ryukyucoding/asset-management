@@ -55,6 +55,19 @@
                 </el-descriptions-item>
                 <el-descriptions-item :label="t('asset.description')" :span="3">{{ row.description ?? '—' }}</el-descriptions-item>
               </el-descriptions>
+              <div v-if="row.imageUrls && row.imageUrls.length > 0" class="asset-images">
+                <div class="asset-images-label">資產圖片</div>
+                <div class="asset-images-grid">
+                  <el-image
+                    v-for="url in row.imageUrls"
+                    :key="url"
+                    :src="url"
+                    :preview-src-list="row.imageUrls"
+                    fit="cover"
+                    class="asset-thumb"
+                  />
+                </div>
+              </div>
             </div>
           </template>
         </el-table-column>
@@ -203,6 +216,11 @@
             </el-form-item>
           </el-col>
         </el-row>
+
+        <el-divider content-position="left">資產圖片</el-divider>
+        <el-form-item label-width="0">
+          <ImageUploader v-model="form.imageUrls" :max-files="5" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="formVisible = false">{{ t('common.cancel') }}</el-button>
@@ -219,6 +237,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import { Plus, Search, Edit, Delete } from '@element-plus/icons-vue'
 import { assetApi } from '@/apis/asset'
 import StatusBadge from '@/components/StatusBadge.vue'
+import ImageUploader from '@/components/ImageUploader.vue'
 
 type AssetStatus = 'AVAILABLE' | 'IN_REPAIR' | 'RETIRED'
 
@@ -239,6 +258,7 @@ interface Asset {
   status: AssetStatus
   holderId: string | null
   description: string | null
+  imageUrls: string[]
 }
 
 const { t } = useI18n()
@@ -306,6 +326,7 @@ const form = reactive({
   purchaseDate: '' as string, warrantyExpiry: '' as string,
   location: '', assignedDept: '', startDate: '' as string,
   status: 'AVAILABLE' as AssetStatus, description: '',
+  imageUrls: [] as string[],
 })
 
 const rules: FormRules = {
@@ -322,7 +343,7 @@ function openCreateDialog() {
     supplier: '', purchaseCost: undefined,
     purchaseDate: '', warrantyExpiry: '',
     location: '', assignedDept: '', startDate: '',
-    status: 'AVAILABLE', description: '',
+    status: 'AVAILABLE', description: '', imageUrls: [],
   })
   formVisible.value = true
 }
@@ -340,6 +361,7 @@ function openEditDialog(asset: Asset) {
     assignedDept:   asset.assignedDept  ?? '',
     startDate:      asset.startDate     ?? '',
     description:    asset.description   ?? '',
+    imageUrls:      asset.imageUrls     ?? [],
   })
   formVisible.value = true
 }
@@ -364,6 +386,7 @@ async function submitForm() {
       startDate:      form.startDate || undefined,
       status:         editingId.value ? form.status : undefined,
       description:    form.description || undefined,
+      imageUrls:      form.imageUrls,
     }
     if (editingId.value) {
       await assetApi.update(editingId.value, payload)
@@ -415,7 +438,11 @@ onMounted(fetchAssets)
   overflow: hidden;
 }
 
-.expand-panel { padding: 12px 24px; background: #fafbff; }
+.expand-panel { padding: 12px 24px; background: #fafbff; display: flex; flex-direction: column; gap: 12px; }
+
+.asset-images-label { font-size: 12px; font-weight: 600; color: var(--c-text-3); margin-bottom: 6px; }
+.asset-images-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.asset-thumb { width: 80px; height: 80px; border-radius: 6px; object-fit: cover; cursor: pointer; border: 1px solid var(--c-border); }
 
 .asset-name { font-weight: 600; color: var(--c-text-1); }
 

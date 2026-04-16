@@ -30,7 +30,9 @@ test.describe('Login flow', () => {
     await page.getByPlaceholder(/password|密碼/i).fill('wrongpassword')
     await page.getByRole('button', { name: /login|登入/i }).click()
     // ElMessage error or form error should appear
-    await expect(page.locator('.el-message--error, .el-form-item__error').first()).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('.el-message--error, .el-form-item__error').first()).toBeVisible({
+      timeout: 5000,
+    })
   })
 
   test('logs in as admin and navigates to asset management', async ({ page }) => {
@@ -141,7 +143,10 @@ test.describe('Admin application review', () => {
   })
 
   test('pending tab shows applications with PENDING status', async ({ page }) => {
-    await page.getByRole('button', { name: /待審核|pending/i }).first().click()
+    await page
+      .getByRole('button', { name: /待審核|pending/i })
+      .first()
+      .click()
     await page.waitForTimeout(300)
     // Either table shows PENDING items or is empty
     const table = page.locator('.el-table')
@@ -159,6 +164,8 @@ test.describe('Language switcher', () => {
     await select.click()
     await page.getByRole('option', { name: 'English' }).click()
     // Check that nav label changes
-    await expect(page.locator('.nav-label', { hasText: 'Assets' }).first()).toBeVisible({ timeout: 3000 })
+    await expect(page.locator('.nav-label', { hasText: 'Assets' }).first()).toBeVisible({
+      timeout: 3000,
+    })
   })
 })

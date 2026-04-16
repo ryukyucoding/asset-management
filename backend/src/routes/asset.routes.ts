@@ -39,6 +39,7 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
       assignedDept:  rest.assignedDept  ?? null,
       holderId:      rest.holderId      ?? null,
       description:   rest.description   ?? null,
+      imageUrls:     rest.imageUrls     ?? [],
     });
     return reply.status(201).send(asset);
   });

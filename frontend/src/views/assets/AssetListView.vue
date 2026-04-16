@@ -115,7 +115,7 @@
     <el-dialog
       v-model="repairVisible"
       :title="`提交維修申請：${selectedAsset?.name ?? ''}`"
-      width="500px"
+      width="520px"
       destroy-on-close
     >
       <el-form ref="repairFormRef" :model="repairForm" :rules="repairRules" label-width="100px" class="dialog-form">
@@ -130,6 +130,9 @@
             :rows="4"
             placeholder="請詳細描述故障情況、出現時間及影響範圍"
           />
+        </el-form-item>
+        <el-form-item label="故障圖片">
+          <ImageUploader v-model="repairForm.imageUrls" :max-files="5" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -148,6 +151,7 @@ import { Search } from '@element-plus/icons-vue'
 import { assetApi } from '@/apis/asset'
 import { applicationApi } from '@/apis/application'
 import StatusBadge from '@/components/StatusBadge.vue'
+import ImageUploader from '@/components/ImageUploader.vue'
 
 type AssetStatus = 'AVAILABLE' | 'IN_REPAIR' | 'RETIRED'
 
@@ -231,7 +235,7 @@ const repairVisible  = ref(false)
 const repairLoading  = ref(false)
 const repairFormRef  = ref<FormInstance>()
 const selectedAsset  = ref<Asset | null>(null)
-const repairForm     = reactive({ faultDescription: '' })
+const repairForm     = reactive({ faultDescription: '', imageUrls: [] as string[] })
 
 const repairRules: FormRules = {
   faultDescription: [{ required: true, min: 5, message: '故障描述至少 5 個字', trigger: 'blur' }],
@@ -240,6 +244,7 @@ const repairRules: FormRules = {
 function openRepairDialog(asset: Asset) {
   selectedAsset.value = asset
   repairForm.faultDescription = ''
+  repairForm.imageUrls = []
   repairVisible.value = true
 }
 
@@ -251,6 +256,7 @@ async function submitRepair() {
     await applicationApi.create({
       assetId:          selectedAsset.value.id,
       faultDescription: repairForm.faultDescription,
+      imageUrls:        repairForm.imageUrls,
     })
     ElMessage.success('維修申請已提交，等待管理員審核')
     repairVisible.value = false

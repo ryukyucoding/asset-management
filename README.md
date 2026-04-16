@@ -2,6 +2,16 @@
 
 TSMC 課程專案。支援資產借用、領用、審核流程，部署目標為 GCP Cloud Run。
 
+## 系統架構文件
+
+| 文件 | 說明 |
+|------|------|
+| [docs/architecture.md](docs/architecture.md) | Overall System Architecture Diagram |
+| [docs/sequence-diagram.md](docs/sequence-diagram.md) | Sequence Diagram（登入、維修申請流程、狀態機） |
+| [docs/er-diagram.md](docs/er-diagram.md) | ER Diagram（資料庫實體關係） |
+
+---
+
 ## 技術架構
 
 | 層 | 技術 |
@@ -11,6 +21,7 @@ TSMC 課程專案。支援資產借用、領用、審核流程，部署目標為
 | Database | PostgreSQL (本地 Docker / 雲端 Cloud SQL) |
 | Cache/Queue | Redis + BullMQ (本地 Docker / 雲端 Memorystore) |
 | ORM | Prisma |
+| 圖片存儲 | 本地 `./uploads/`（開發）/ GCS（生產） |
 
 ---
 
@@ -120,6 +131,127 @@ docker compose down -v       # 停止並清除所有資料
 
 ---
 
+## Migration 工作流程
+
+### 日常流程（修改 schema）
+
+```bash
+cd backend
+
+# 1. 編輯 prisma/schema.prisma
+# 2. 建立並套用 migration（開發環境）
+pnpm db:migrate
+
+# 3. 重新產生 Prisma Client 型別
+pnpm db:generate
+```
+
+> `pnpm db:migrate` 會互動式詢問 migration 名稱，例如輸入 `add_asset_image_urls`。
+
+### 生產部署流程
+
+```bash
+# 生產環境只套用 migration，不建立新的
+pnpm db:migrate:prod    # prisma migrate deploy
+```
+
+### 手動建立 migration（特殊情況）
+
+若遇到 migrate dev 失敗（如「applied but missing from local」），可改用手動方式：
+
+```bash
+# 1. 在 prisma/migrations/ 建立新目錄，名稱格式：NNNN_描述
+mkdir -p backend/prisma/migrations/0003_your_change
+
+# 2. 在目錄內建立 migration.sql，寫入 DDL
+cat > backend/prisma/migrations/0003_your_change/migration.sql << 'EOF'
+ALTER TABLE "assets" ADD COLUMN IF NOT EXISTS "newField" TEXT;
+EOF
+
+# 3. 套用到資料庫
+cd backend && pnpm db:migrate:prod
+
+# 4. 重新產生 Prisma Client
+pnpm db:generate
+```
+
+### Prisma 指令速查
+
+| 指令 | 說明 |
+|------|------|
+| `pnpm db:migrate` | 建立 migration 並套用（開發用，會互動詢問名稱） |
+| `pnpm db:migrate:prod` | 套用所有 pending migrations（生產用，不建立新的） |
+| `pnpm db:generate` | 重新產生 Prisma Client（schema 改動後執行） |
+| `pnpm db:seed` | 填入種子資料（admin + user + 範例資產） |
+| `pnpm db:reset` | 清空 DB 並重跑所有 migration + seed（開發用） |
+
+---
+
+## 圖片上傳
+
+### 本地開發（預設）
+
+圖片存在後端本機的 `backend/uploads/` 目錄，透過 `GET /uploads/:filename` 提供存取。
+
+```env
+# backend/.env（預設，不需要額外設定）
+STORAGE_DRIVER="local"
+BASE_URL="http://localhost:3000"
+```
+
+上傳後的 URL 格式：`http://localhost:3000/uploads/<uuid>.jpg`
+
+### 部署到 GCP Cloud Run（GCS）
+
+切換只需修改環境變數，**程式碼零修改**。
+
+```env
+# backend/.env 或 Cloud Run 環境變數
+STORAGE_DRIVER="gcs"
+GCS_BUCKET_NAME="your-bucket-name"
+# GOOGLE_APPLICATION_CREDENTIALS 不用設 — Cloud Run 自動使用 Attached Service Account
+```
+
+#### GCS Bucket 一次性設定
+
+```bash
+# 1. 建立 bucket（asia-east1 = 台灣）
+gcloud storage buckets create gs://your-bucket-name --location=asia-east1
+
+# 2. 讓圖片公開可讀
+gcloud storage buckets add-iam-policy-binding gs://your-bucket-name \
+  --member="allUsers" --role="roles/storage.objectViewer"
+
+# 3. 給 Cloud Run Service Account 寫入權限
+gcloud storage buckets add-iam-policy-binding gs://your-bucket-name \
+  --member="serviceAccount:YOUR-SA@PROJECT.iam.gserviceaccount.com" \
+  --role="roles/storage.objectCreator"
+```
+
+上傳後的 URL 格式：`https://storage.googleapis.com/your-bucket-name/uploads/<uuid>.jpg`
+
+#### 本地想測試 GCS
+
+```bash
+# 下載 GCP service account key JSON，然後：
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/key.json"
+export STORAGE_DRIVER="gcs"
+export GCS_BUCKET_NAME="your-bucket-name"
+pnpm dev
+```
+
+### Storage Adapter 架構
+
+```
+src/infrastructure/storage/
+├── storage.interface.ts       ← IStorageAdapter（save / delete）
+├── local-storage.adapter.ts   ← 存 ./uploads/，開發用
+├── gcs-storage.adapter.ts     ← 存 GCS bucket，生產用
+└── storage.factory.ts         ← 讀 STORAGE_DRIVER 決定用哪個
+```
+
+---
+
 ## 啟動開發伺服器
 
 從 root 同時啟動
@@ -162,23 +294,6 @@ pnpm test:e2e           # Playwright E2E（需要前後端都起來）
 
 ---
 
-## Prisma 常用指令
-
-```bash
-cd backend
-
-pnpm db:migrate         # 建立 migration 並套用
-pnpm db:generate        # 重新產生 Prisma Client
-pnpm db:seed            # 填入種子資料
-
-# 修改 schema 後的流程：
-# 1. 編輯 prisma/schema.prisma
-# 2. pnpm db:migrate     ← 建立並套用 migration
-# 3. pnpm db:generate    ← 更新 Prisma Client 型別
-```
-
----
-
 ## 專案結構
 
 ```
@@ -189,22 +304,28 @@ asset-management/
 ├── backend/
 │   ├── src/
 │   │   ├── domain/          # 業務核心（entities + repository interfaces）
-│   │   ├── infrastructure/  # Prisma 實作、外部服務 adapter
+│   │   ├── infrastructure/  # Prisma 實作、storage adapters
+│   │   │   └── storage/     # LocalStorageAdapter / GCSStorageAdapter
 │   │   ├── services/        # 應用服務（auth, asset, application...）
 │   │   ├── routes/          # Fastify routes
 │   │   ├── dtos/            # Zod schema 驗證
 │   │   ├── middleware/       # JWT auth, RBAC
 │   │   └── index.ts         # 入口
+│   ├── uploads/             # 本地上傳圖片（STORAGE_DRIVER=local 時）
 │   └── prisma/
-│       └── schema.prisma
+│       ├── schema.prisma
+│       ├── seed.ts
+│       └── migrations/
+│           ├── 0001_init_repair_system/
+│           └── 0002_asset_image_urls/
 │
 └── frontend/
     └── src/
         ├── apis/            # axios API 呼叫
+        ├── components/      # 共用元件（含 ImageUploader.vue）
         ├── store/           # Pinia stores
         ├── composable/      # Vue composables
         ├── views/           # 頁面
-        ├── components/      # 共用元件
         └── i18n/            # 中英文翻譯
 ```
 

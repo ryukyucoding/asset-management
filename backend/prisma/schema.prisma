@@ -63,6 +63,7 @@ model Asset {
   status         AssetStatus   @default(AVAILABLE)
   holderId       String?       // 負責人 userId
   description    String?
+  imageUrls      String[]      @default([])  // 資產圖片 URL
   applications   Application[]
   auditLogs      AuditLog[]
   createdAt      DateTime      @default(now())

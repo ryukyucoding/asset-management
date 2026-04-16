@@ -22,12 +22,12 @@ export interface RepairDetailsData {
 }
 
 export const applicationApi = {
-  list:          (query: ApplicationQuery = {}) => http.get('/applications', { params: query }),
-  get:           (id: string)                    => http.get(`/applications/${id}`),
-  create:        (data: CreateApplicationData)   => http.post('/applications', data),
-  approve:       (id: string, data: { action: 'APPROVED' | 'REJECTED'; comment?: string }) =>
-                   http.patch(`/applications/${id}/approve`, data),
+  list: (query: ApplicationQuery = {}) => http.get('/applications', { params: query }),
+  get: (id: string) => http.get(`/applications/${id}`),
+  create: (data: CreateApplicationData) => http.post('/applications', data),
+  approve: (id: string, data: { action: 'APPROVED' | 'REJECTED'; comment?: string }) =>
+    http.patch(`/applications/${id}/approve`, data),
   repairDetails: (id: string, data: RepairDetailsData) =>
-                   http.patch(`/applications/${id}/repair-details`, data),
-  complete:      (id: string)                    => http.patch(`/applications/${id}/complete`),
+    http.patch(`/applications/${id}/repair-details`, data),
+  complete: (id: string) => http.patch(`/applications/${id}/complete`),
 }
