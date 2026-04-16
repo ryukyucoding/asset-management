@@ -25,7 +25,21 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
     const body = CreateAssetDTO.safeParse(request.body);
     if (!body.success) return reply.status(400).send({ error: 'VALIDATION_ERROR', details: body.error.flatten() });
 
-    const asset = await assetRepo.create({ ...body.data, status: 'AVAILABLE', holderId: null, description: body.data.description ?? null });
+    const { purchaseDate, startDate, warrantyExpiry, ...rest } = body.data;
+    const asset = await assetRepo.create({
+      ...rest,
+      purchaseDate:   purchaseDate   ? new Date(purchaseDate)   : null,
+      startDate:      startDate      ? new Date(startDate)      : null,
+      warrantyExpiry: warrantyExpiry ? new Date(warrantyExpiry) : null,
+      status: 'AVAILABLE',
+      model:         rest.model         ?? null,
+      spec:          rest.spec          ?? null,
+      supplier:      rest.supplier      ?? null,
+      purchaseCost:  rest.purchaseCost  ?? null,
+      assignedDept:  rest.assignedDept  ?? null,
+      holderId:      rest.holderId      ?? null,
+      description:   rest.description   ?? null,
+    });
     return reply.status(201).send(asset);
   });
 
@@ -37,7 +51,13 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
     const existing = await assetRepo.findById(id);
     if (!existing) return reply.status(404).send({ error: 'NOT_FOUND' });
 
-    const updated = await assetRepo.update(id, body.data);
+    const { purchaseDate, startDate, warrantyExpiry, ...rest } = body.data;
+    const updated = await assetRepo.update(id, {
+      ...rest,
+      ...(purchaseDate   !== undefined && { purchaseDate:   purchaseDate   ? new Date(purchaseDate)   : null }),
+      ...(startDate      !== undefined && { startDate:      startDate      ? new Date(startDate)      : null }),
+      ...(warrantyExpiry !== undefined && { warrantyExpiry: warrantyExpiry ? new Date(warrantyExpiry) : null }),
+    });
     return reply.send(updated);
   });
 

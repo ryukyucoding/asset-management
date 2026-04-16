@@ -8,12 +8,16 @@ export class AssetRepository implements IAssetRepository {
   }
 
   async findAll(params: AssetSearchParams): Promise<PaginatedResult<AssetEntity>> {
-    const { name, category, location, status, page = 1, limit = 20 } = params;
+    const { name, serialNo, category, location, assignedDept, holderId, status, page = 1, limit = 20 } = params;
+
     const where = {
-      ...(name && { name: { contains: name, mode: 'insensitive' as const } }),
-      ...(category && { category }),
-      ...(location && { location }),
-      ...(status && { status }),
+      ...(name        && { name:        { contains: name,        mode: 'insensitive' as const } }),
+      ...(serialNo    && { serialNo:    { contains: serialNo,    mode: 'insensitive' as const } }),
+      ...(category    && { category }),
+      ...(location    && { location:    { contains: location,    mode: 'insensitive' as const } }),
+      ...(assignedDept && { assignedDept: { contains: assignedDept, mode: 'insensitive' as const } }),
+      ...(holderId    && { holderId }),
+      ...(status      && { status }),
     };
 
     const [data, total] = await Promise.all([

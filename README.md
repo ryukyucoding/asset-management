@@ -54,18 +54,61 @@ cp frontend/.env.example frontend/.env
 
 ## 本地資料庫（Docker）
 
+> **Port 說明：** Docker PostgreSQL 使用 `5434`，避開本機常見的 5432（Homebrew）與 5433（EDB）。
+> 若你的機器沒有 port 衝突，可在 `docker-compose.yml` 自行調整。
+
 ### 啟動 PostgreSQL + Redis
 
 ```bash
 docker compose up -d
 ```
 
-### 執行 DB migration
+### 執行 DB migration + seed
 
 ```bash
 cd backend
-pnpm db:migrate     # 建立資料表
-pnpm db:seed        # 填入初始資料（admin 帳號等）
+pnpm db:migrate     # 建立所有資料表（prisma migrate dev）
+pnpm db:seed        # 填入初始帳號與範例資產
+```
+
+seed 完成後可用以下帳密登入：
+
+| 角色 | Email | 密碼 |
+|------|-------|------|
+| 管理員 | `admin@example.com` | `Admin1234` |
+| 一般用戶 | `user@example.com` | `User1234` |
+
+### 確認資料已進入 Docker
+
+```bash
+docker exec asset-management-postgres-1 \
+  psql -U postgres -d asset_management \
+  -c 'SELECT email, role FROM users;'
+```
+
+正常輸出：
+
+```
+       email       | role
+-------------------+-------
+ admin@example.com | ADMIN
+ user@example.com  | USER
+```
+
+### 重置資料庫（清空重來）
+
+```bash
+cd backend
+pnpm db:reset       # prisma migrate reset --force（會重跑 seed）
+```
+
+或完全清除 Docker volume：
+
+```bash
+docker compose down -v      # 停止並刪除所有資料
+docker volume rm asset-management_postgres_data   # 若 down -v 未清乾淨
+docker compose up -d
+cd backend && pnpm db:migrate && pnpm db:seed
 ```
 
 ### 停止資料庫

@@ -2,8 +2,11 @@ import type { AssetEntity, AssetStatus } from '@domain/entities/asset.entity';
 
 export interface AssetSearchParams {
   name?: string;
+  serialNo?: string;
   category?: string;
   location?: string;
+  assignedDept?: string;
+  holderId?: string;
   status?: AssetStatus;
   page?: number;
   limit?: number;

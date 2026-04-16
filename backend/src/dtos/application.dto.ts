@@ -1,26 +1,32 @@
 import { z } from 'zod';
 
 export const CreateApplicationDTO = z.object({
-  assetId: z.string().cuid(),
-  type: z.enum(['BORROW', 'CLAIM']),
-  returnDate: z.string().datetime().optional(),
-  reason: z.string().optional(),
-}).refine(
-  (data) => data.type !== 'BORROW' || data.returnDate !== undefined,
-  { message: 'returnDate is required for BORROW applications', path: ['returnDate'] }
-);
+  assetId:          z.string().cuid(),
+  faultDescription: z.string().min(5, 'faultDescription is required and must be at least 5 characters'),
+  imageUrls:        z.array(z.string().url()).optional().default([]),
+});
 
 export const ReviewApplicationDTO = z.object({
-  action: z.enum(['APPROVED', 'REJECTED']),
+  action:  z.enum(['APPROVED', 'REJECTED']),
   comment: z.string().optional(),
 });
 
+export const RepairDetailsDTO = z.object({
+  repairDate:     z.string().datetime().optional(),
+  repairContent:  z.string().optional(),
+  repairSolution: z.string().optional(),
+  repairCost:     z.number().nonnegative().optional(),
+  repairVendor:   z.string().optional(),
+});
+
 export const ApplicationQueryDTO = z.object({
-  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'RETURNED', 'CANCELLED']).optional(),
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(20),
+  status:  z.enum(['PENDING', 'IN_REPAIR', 'COMPLETED', 'REJECTED']).optional(),
+  assetId: z.string().optional(),
+  page:    z.coerce.number().int().positive().default(1),
+  limit:   z.coerce.number().int().positive().max(100).default(20),
 });
 
 export type CreateApplicationDTOType = z.infer<typeof CreateApplicationDTO>;
 export type ReviewApplicationDTOType = z.infer<typeof ReviewApplicationDTO>;
-export type ApplicationQueryDTOType = z.infer<typeof ApplicationQueryDTO>;
+export type RepairDetailsDTOType     = z.infer<typeof RepairDetailsDTO>;
+export type ApplicationQueryDTOType  = z.infer<typeof ApplicationQueryDTO>;

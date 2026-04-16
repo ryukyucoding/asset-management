@@ -13,23 +13,16 @@ enum Role {
 }
 
 enum AssetStatus {
-  AVAILABLE
-  BORROWED
-  CLAIMED
-  RETIRED
-}
-
-enum ApplicationType {
-  BORROW
-  CLAIM
+  AVAILABLE  // 正常使用
+  IN_REPAIR  // 維修中
+  RETIRED    // 已報廢
 }
 
 enum ApplicationStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  RETURNED
-  CANCELLED
+  PENDING    // 待審核
+  IN_REPAIR  // 維修中（已審核通過）
+  COMPLETED  // 維修完成
+  REJECTED   // 已拒絕
 }
 
 enum ApprovalAction {
@@ -38,51 +31,65 @@ enum ApprovalAction {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  name         String
-  email        String        @unique
-  passwordHash String
-  role         Role          @default(USER)
-  department   String?
-  applications Application[]
-  approvals    Approval[]
+  id            String        @id @default(cuid())
+  name          String
+  email         String        @unique
+  passwordHash  String
+  role          Role          @default(USER)
+  department    String?
+  applications  Application[]
+  approvals     Approval[]
   notifications Notification[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@map("users")
 }
 
 model Asset {
-  id           String        @id @default(cuid())
-  name         String
-  serialNo     String        @unique
-  category     String
-  location     String
-  status       AssetStatus   @default(AVAILABLE)
-  holderId     String?
-  description  String?
-  applications Application[]
-  auditLogs    AuditLog[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  name           String
+  serialNo       String        @unique
+  category       String
+  model          String?       // 型號
+  spec           String?       // 規格
+  supplier       String?       // 供應商
+  purchaseDate   DateTime?     // 採購日期
+  purchaseCost   Float?        // 採購金額
+  location       String        // 存放地點
+  assignedDept   String?       // 使用部門
+  startDate      DateTime?     // 啟用日期
+  warrantyExpiry DateTime?     // 保固期限
+  status         AssetStatus   @default(AVAILABLE)
+  holderId       String?       // 負責人 userId
+  description    String?
+  applications   Application[]
+  auditLogs      AuditLog[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@map("assets")
 }
 
 model Application {
-  id         String            @id @default(cuid())
-  userId     String
-  assetId    String
-  type       ApplicationType
-  status     ApplicationStatus @default(PENDING)
-  returnDate DateTime?
-  reason     String?
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-  user       User              @relation(fields: [userId], references: [id])
-  asset      Asset             @relation(fields: [assetId], references: [id])
-  approvals  Approval[]
+  id               String            @id @default(cuid())
+  userId           String
+  assetId          String
+  status           ApplicationStatus @default(PENDING)
+  // 申請者填寫
+  faultDescription String            // 故障描述
+  imageUrls        String[]          @default([])  // 故障圖片 URL
+  // 維修人員填寫（審核通過後）
+  repairDate       DateTime?         // 維修日期
+  repairContent    String?           // 故障內容（維修人員記錄）
+  repairSolution   String?           // 維修方案
+  repairCost       Float?            // 維修費用
+  repairVendor     String?           // 維修人員/廠商
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  user             User              @relation(fields: [userId], references: [id])
+  asset            Asset             @relation(fields: [assetId], references: [id])
+  approvals        Approval[]
 
   @@map("applications")
 }
