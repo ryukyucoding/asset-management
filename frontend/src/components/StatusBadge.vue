@@ -13,14 +13,16 @@ const props = defineProps<{ status: string; label: string }>()
 const variant = computed(() => {
   const map: Record<string, string> = {
     AVAILABLE: 'success',
-    APPROVED: 'success',
-    BORROWED: 'warning',
-    PENDING: 'pending',
-    CLAIMED: 'info',
-    RETURNED: 'neutral',
-    REJECTED: 'danger',
+    APPROVED:  'success',
+    COMPLETED: 'success',
+    IN_REPAIR: 'warning',
+    PENDING:   'pending',
+    BORROWED:  'warning',
+    CLAIMED:   'info',
+    RETURNED:  'neutral',
+    REJECTED:  'danger',
     CANCELLED: 'neutral',
-    RETIRED: 'danger',
+    RETIRED:   'danger',
   }
   return map[props.status] ?? 'neutral'
 })

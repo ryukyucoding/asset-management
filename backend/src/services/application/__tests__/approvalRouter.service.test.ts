@@ -1,73 +1,104 @@
 import { describe, it, expect } from 'vitest';
 import { resolveApprovalSteps } from '../approvalRouter.service';
 import type { ApplicationEntity } from '@domain/entities/application.entity';
+import type { AssetEntity } from '@domain/entities/asset.entity';
 
-function makeApplication(overrides: Partial<ApplicationEntity> = {}): ApplicationEntity {
+function makeAsset(category: string): AssetEntity {
+  return {
+    id: 'asset-1',
+    name: 'Test Asset',
+    serialNo: 'SN-001',
+    category,
+    model: null,
+    spec: null,
+    supplier: null,
+    purchaseDate: null,
+    purchaseCost: null,
+    location: 'Office A',
+    assignedDept: null,
+    startDate: null,
+    warrantyExpiry: null,
+    status: 'AVAILABLE',
+    holderId: null,
+    description: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
+function makeApp(asset?: AssetEntity): ApplicationEntity {
   return {
     id: 'app-1',
     userId: 'user-1',
-    assetId: 'asset-1',
-    type: 'BORROW',
+    assetId: asset?.id ?? 'asset-1',
     status: 'PENDING',
-    returnDate: new Date(),
-    reason: null,
+    faultDescription: 'Screen is cracked',
+    imageUrls: [],
+    repairDate: null,
+    repairContent: null,
+    repairSolution: null,
+    repairCost: null,
+    repairVendor: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    user: { id: 'user-1', name: 'User', email: 'u@x.com', role: 'USER', department: 'Engineering', createdAt: new Date(), updatedAt: new Date() },
-    asset: { id: 'asset-1', name: 'Laptop', serialNo: 'LP-001', category: 'LAPTOP', location: 'Engineering', status: 'AVAILABLE', holderId: null, description: null, createdAt: new Date(), updatedAt: new Date() },
-    ...overrides,
+    asset,
   };
 }
 
 describe('resolveApprovalSteps', () => {
-  it('returns single ADMIN step for normal request', () => {
-    const app = makeApplication();
-    const steps = resolveApprovalSteps(app);
-    expect(steps).toHaveLength(1);
-    expect(steps[0].role).toBe('ADMIN');
+  describe('standard assets — single ADMIN step', () => {
+    it('returns one ADMIN step for IT設備', () => {
+      const steps = resolveApprovalSteps(makeApp(makeAsset('IT設備')));
+      expect(steps).toHaveLength(1);
+      expect(steps[0]).toEqual({ role: 'ADMIN', step: 1 });
+    });
+
+    it('returns one ADMIN step for 辦公設備', () => {
+      const steps = resolveApprovalSteps(makeApp(makeAsset('辦公設備')));
+      expect(steps).toHaveLength(1);
+    });
+
+    it('returns one ADMIN step for 實驗器材', () => {
+      const steps = resolveApprovalSteps(makeApp(makeAsset('實驗器材')));
+      expect(steps).toHaveLength(1);
+    });
+
+    it('returns one ADMIN step for 交通工具', () => {
+      const steps = resolveApprovalSteps(makeApp(makeAsset('交通工具')));
+      expect(steps).toHaveLength(1);
+    });
+
+    it('returns one ADMIN step when asset is undefined', () => {
+      const steps = resolveApprovalSteps(makeApp(undefined));
+      expect(steps).toHaveLength(1);
+      expect(steps[0].role).toBe('ADMIN');
+    });
   });
 
-  it('adds SENIOR_ADMIN step for HIGH_VALUE category', () => {
-    const app = makeApplication({
-      asset: { id: 'a', name: 'Switch', serialNo: 'SW-001', category: 'HIGH_VALUE', location: 'Engineering', status: 'AVAILABLE', holderId: null, description: null, createdAt: new Date(), updatedAt: new Date() },
-    });
-    const steps = resolveApprovalSteps(app);
-    expect(steps).toHaveLength(2);
-    expect(steps.map(s => s.role)).toContain('SENIOR_ADMIN');
+  describe('high-value assets — two steps (ADMIN + SENIOR_ADMIN)', () => {
+    it.each(['HIGH_VALUE', 'SERVER', 'EQUIPMENT'])(
+      'adds SENIOR_ADMIN second step for category "%s"',
+      (category) => {
+        const steps = resolveApprovalSteps(makeApp(makeAsset(category)));
+        expect(steps).toHaveLength(2);
+        expect(steps[0]).toEqual({ role: 'ADMIN', step: 1 });
+        expect(steps[1]).toEqual({ role: 'SENIOR_ADMIN', step: 2 });
+      },
+    );
   });
 
-  it('adds SENIOR_ADMIN step for SERVER category', () => {
-    const app = makeApplication({
-      asset: { id: 'a', name: 'Server', serialNo: 'SV-001', category: 'SERVER', location: 'Engineering', status: 'AVAILABLE', holderId: null, description: null, createdAt: new Date(), updatedAt: new Date() },
+  describe('step ordering and immutability', () => {
+    it('always starts with ADMIN at step 1', () => {
+      const steps = resolveApprovalSteps(makeApp(makeAsset('SERVER')));
+      expect(steps[0].step).toBe(1);
+      expect(steps[1].step).toBe(2);
     });
-    const steps = resolveApprovalSteps(app);
-    expect(steps.map(s => s.role)).toContain('SENIOR_ADMIN');
-  });
 
-  it('adds DEPT_MANAGER step for cross-department request', () => {
-    const app = makeApplication({
-      user: { id: 'u', name: 'U', email: 'u@x.com', role: 'USER', department: 'Sales', createdAt: new Date(), updatedAt: new Date() },
-      asset: { id: 'a', name: 'Monitor', serialNo: 'MN-001', category: 'MONITOR', location: 'IT', status: 'AVAILABLE', holderId: null, description: null, createdAt: new Date(), updatedAt: new Date() },
+    it('returns a new array on every call (no shared state)', () => {
+      const app = makeApp(makeAsset('IT設備'));
+      const a = resolveApprovalSteps(app);
+      const b = resolveApprovalSteps(app);
+      expect(a).not.toBe(b);
     });
-    const steps = resolveApprovalSteps(app);
-    expect(steps.map(s => s.role)).toContain('DEPT_MANAGER');
-  });
-
-  it('same department does NOT trigger DEPT_MANAGER', () => {
-    const app = makeApplication({
-      user: { id: 'u', name: 'U', email: 'u@x.com', role: 'USER', department: 'IT', createdAt: new Date(), updatedAt: new Date() },
-      asset: { id: 'a', name: 'Monitor', serialNo: 'MN-001', category: 'MONITOR', location: 'IT', status: 'AVAILABLE', holderId: null, description: null, createdAt: new Date(), updatedAt: new Date() },
-    });
-    const steps = resolveApprovalSteps(app);
-    expect(steps.map(s => s.role)).not.toContain('DEPT_MANAGER');
-  });
-
-  it('HIGH_VALUE + cross-department = 3 steps', () => {
-    const app = makeApplication({
-      user: { id: 'u', name: 'U', email: 'u@x.com', role: 'USER', department: 'Sales', createdAt: new Date(), updatedAt: new Date() },
-      asset: { id: 'a', name: 'Server', serialNo: 'SV-001', category: 'HIGH_VALUE', location: 'IT', status: 'AVAILABLE', holderId: null, description: null, createdAt: new Date(), updatedAt: new Date() },
-    });
-    const steps = resolveApprovalSteps(app);
-    expect(steps).toHaveLength(3);
   });
 });
