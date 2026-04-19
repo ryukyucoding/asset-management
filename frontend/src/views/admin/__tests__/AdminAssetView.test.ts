@@ -12,6 +12,10 @@ vi.mock('@/apis/asset', () => ({
   },
 }))
 
+vi.mock('@/apis/user', () => ({
+  userApi: { list: vi.fn().mockResolvedValue({ data: [] }) },
+}))
+
 vi.mock('element-plus', async (importOriginal) => {
   const mod = await importOriginal<typeof import('element-plus')>()
   return {

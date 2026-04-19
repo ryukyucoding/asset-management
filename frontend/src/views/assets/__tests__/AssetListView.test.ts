@@ -11,6 +11,7 @@ vi.mock('@/apis/asset', () => ({
 
 vi.mock('@/apis/application', () => ({
   applicationApi: {
+    list:   vi.fn().mockResolvedValue({ data: { data: [], total: 0 } }),
     create: vi.fn(),
   },
 }))
@@ -26,7 +27,14 @@ import { assetApi } from '@/apis/asset'
 // ─────────────────────────────────────────────────────────────────────────────
 
 function mockListSuccess(items = [makeAsset()], total = 1) {
-  vi.mocked(assetApi.list).mockResolvedValue({ data: { data: items, total } } as never)
+  vi.mocked(assetApi.list).mockImplementation(({ status, limit }: Record<string, unknown> = {}) => {
+    // stat-count calls (limit:1 + status filter) return totals derived from items
+    if (limit === 1 && status) {
+      const count = items.filter((a) => a.status === status).length
+      return Promise.resolve({ data: { data: [], total: count } }) as never
+    }
+    return Promise.resolve({ data: { data: items, total } }) as never
+  })
 }
 
 describe('AssetListView', () => {
@@ -40,7 +48,9 @@ describe('AssetListView', () => {
     mockListSuccess()
     mountWithPlugins(AssetListView)
     await flushPromises()
-    expect(assetApi.list).toHaveBeenCalledOnce()
+    // 1 page fetch + 2 stat-count fetches (AVAILABLE, IN_REPAIR)
+    expect(assetApi.list).toHaveBeenCalled()
+    expect(assetApi.list).toHaveBeenCalledWith(expect.objectContaining({ page: 1, limit: 10 }))
   })
 
   it('loads without throwing when assets are returned', async () => {

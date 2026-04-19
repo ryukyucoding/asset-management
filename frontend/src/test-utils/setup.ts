@@ -72,6 +72,7 @@ const EP_STUBS: Record<string, object> = {
       'el-loading',
     ].map((name) => [name, EP_SLOT_STUB]),
   ),
+  'el-autocomplete': EP_EMPTY_STUB,
   // Render as real <button> so tests can find/click them
   'el-button': EP_BTN_STUB,
   // Render title + slots so dialog text is assertable

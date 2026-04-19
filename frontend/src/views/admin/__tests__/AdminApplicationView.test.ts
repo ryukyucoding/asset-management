@@ -30,6 +30,20 @@ function mockListSuccess(items = [makeApplication()], total = 1) {
   vi.mocked(applicationApi.list).mockResolvedValue({ data: { data: items, total } } as never)
 }
 
+/** Status-aware mock: KPI calls (limit:1 + status) get their own totals; page calls get items. */
+function mockListByStatus(
+  kpiCounts: Partial<Record<string, number>>,
+  items = [makeApplication()],
+  total = 1,
+) {
+  vi.mocked(applicationApi.list).mockImplementation(({ status, limit }: Record<string, unknown> = {}) => {
+    if (limit === 1 && status) {
+      return Promise.resolve({ data: { data: [], total: kpiCounts[status as string] ?? 0 } }) as never
+    }
+    return Promise.resolve({ data: { data: items, total } }) as never
+  })
+}
+
 describe('AdminApplicationView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -41,7 +55,9 @@ describe('AdminApplicationView', () => {
     mockListSuccess()
     mountWithPlugins(AdminApplicationView)
     await flushPromises()
-    expect(applicationApi.list).toHaveBeenCalledOnce()
+    // 1 page fetch + 4 KPI status fetches
+    expect(applicationApi.list).toHaveBeenCalled()
+    expect(applicationApi.list).toHaveBeenCalledWith(expect.objectContaining({ page: 1, limit: 10 }))
   })
 
   it('fetches with pagination params', async () => {
@@ -63,40 +79,21 @@ describe('AdminApplicationView', () => {
   // ── KPI counters (rendered outside el-table-column) ───────────────────────
 
   it('counts pending applications correctly', async () => {
-    mockListSuccess(
-      [
-        makeApplication({ status: 'PENDING' }),
-        makeApplication({ id: 'app-2', status: 'PENDING' }),
-        makeApplication({ id: 'app-3', status: 'IN_REPAIR' }),
-      ],
-      3,
-    )
+    mockListByStatus({ PENDING: 2, IN_REPAIR: 1, COMPLETED: 0, REJECTED: 0 })
     const wrapper = mountWithPlugins(AdminApplicationView)
     await flushPromises()
     expect(wrapper.find('.kpi-pending .kpi-num').text()).toBe('2')
   })
 
   it('counts in-repair applications correctly', async () => {
-    mockListSuccess(
-      [
-        makeApplication({ status: 'IN_REPAIR' }),
-        makeApplication({ id: 'app-2', status: 'COMPLETED' }),
-      ],
-      2,
-    )
+    mockListByStatus({ PENDING: 0, IN_REPAIR: 1, COMPLETED: 1, REJECTED: 0 })
     const wrapper = mountWithPlugins(AdminApplicationView)
     await flushPromises()
     expect(wrapper.find('.kpi-repair .kpi-num').text()).toBe('1')
   })
 
   it('counts completed and rejected applications', async () => {
-    mockListSuccess(
-      [
-        makeApplication({ status: 'COMPLETED' }),
-        makeApplication({ id: 'app-2', status: 'REJECTED' }),
-      ],
-      2,
-    )
+    mockListByStatus({ PENDING: 0, IN_REPAIR: 0, COMPLETED: 1, REJECTED: 1 })
     const wrapper = mountWithPlugins(AdminApplicationView)
     await flushPromises()
     expect(wrapper.find('.kpi-completed .kpi-num').text()).toBe('1')
