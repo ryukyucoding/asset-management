@@ -12,7 +12,7 @@ export const ReviewApplicationDTO = z.object({
 });
 
 export const RepairDetailsDTO = z.object({
-  repairDate:     z.string().datetime().optional(),
+  repairDate:     z.string().datetime({ offset: true }).optional(),
   repairContent:  z.string().optional(),
   repairSolution: z.string().optional(),
   repairCost:     z.number().nonnegative().optional(),
