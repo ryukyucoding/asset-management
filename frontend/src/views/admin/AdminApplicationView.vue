@@ -228,16 +228,18 @@ const completedCount = ref(0)
 const rejectedCount  = ref(0)
 
 async function fetchKpis() {
-  const [p, r, c, j] = await Promise.all([
-    applicationApi.list({ status: 'PENDING',   limit: 1 }),
-    applicationApi.list({ status: 'IN_REPAIR', limit: 1 }),
-    applicationApi.list({ status: 'COMPLETED', limit: 1 }),
-    applicationApi.list({ status: 'REJECTED',  limit: 1 }),
-  ])
-  pendingCount.value   = p.data.total ?? 0
-  inRepairCount.value  = r.data.total ?? 0
-  completedCount.value = c.data.total ?? 0
-  rejectedCount.value  = j.data.total ?? 0
+  try {
+    const [p, r, c, j] = await Promise.all([
+      applicationApi.list({ status: 'PENDING',   limit: 1 }),
+      applicationApi.list({ status: 'IN_REPAIR', limit: 1 }),
+      applicationApi.list({ status: 'COMPLETED', limit: 1 }),
+      applicationApi.list({ status: 'REJECTED',  limit: 1 }),
+    ])
+    pendingCount.value   = p.data.total ?? 0
+    inRepairCount.value  = r.data.total ?? 0
+    completedCount.value = c.data.total ?? 0
+    rejectedCount.value  = j.data.total ?? 0
+  } catch { /* silent — KPI is non-critical */ }
 }
 
 function formatDate(d: string | null | undefined): string {

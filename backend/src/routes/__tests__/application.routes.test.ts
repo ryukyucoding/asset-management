@@ -19,6 +19,20 @@ const assetMocks = vi.hoisted(() => ({
 
 const prismaMocks = vi.hoisted(() => ({
   approvalCreate: vi.fn(),
+  userFindMany:   vi.fn().mockResolvedValue([]),  // no admins by default
+}));
+
+const notifMocks = vi.hoisted(() => ({
+  create: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@infrastructure/repositories/notification.repository', () => ({
+  NotificationRepository: vi.fn().mockImplementation(() => ({
+    create:       notifMocks.create,
+    findByUserId: vi.fn(),
+    markAsRead:   vi.fn(),
+    markAllAsRead: vi.fn(),
+  })),
 }));
 
 vi.mock('@infrastructure/repositories/application.repository', () => ({
@@ -44,6 +58,9 @@ vi.mock('@infrastructure/database/prisma.client', () => ({
   prisma: {
     approval: {
       create: prismaMocks.approvalCreate,
+    },
+    user: {
+      findMany: prismaMocks.userFindMany,
     },
   },
 }));

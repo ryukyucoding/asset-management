@@ -36,9 +36,10 @@ function mockListByStatus(
   items = [makeApplication()],
   total = 1,
 ) {
-  vi.mocked(applicationApi.list).mockImplementation(({ status, limit }: Record<string, unknown> = {}) => {
+  vi.mocked(applicationApi.list).mockImplementation((query = {}) => {
+    const { status, limit } = query
     if (limit === 1 && status) {
-      return Promise.resolve({ data: { data: [], total: kpiCounts[status as string] ?? 0 } }) as never
+      return Promise.resolve({ data: { data: [], total: kpiCounts[status] ?? 0 } }) as never
     }
     return Promise.resolve({ data: { data: items, total } }) as never
   })

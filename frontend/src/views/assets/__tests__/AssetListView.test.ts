@@ -27,7 +27,8 @@ import { assetApi } from '@/apis/asset'
 // ─────────────────────────────────────────────────────────────────────────────
 
 function mockListSuccess(items = [makeAsset()], total = 1) {
-  vi.mocked(assetApi.list).mockImplementation(({ status, limit }: Record<string, unknown> = {}) => {
+  vi.mocked(assetApi.list).mockImplementation((query = {}) => {
+    const { status, limit } = query
     // stat-count calls (limit:1 + status filter) return totals derived from items
     if (limit === 1 && status) {
       const count = items.filter((a) => a.status === status).length
