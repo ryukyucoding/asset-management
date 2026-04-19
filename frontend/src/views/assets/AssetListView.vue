@@ -153,7 +153,9 @@ import { applicationApi } from '@/apis/application'
 import StatusBadge from '@/components/StatusBadge.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 
-const pendingCount = ref(0)
+const pendingCount      = ref(0)
+const availableCount    = ref(0)
+const inRepairCount     = ref(0)
 
 type AssetStatus = 'AVAILABLE' | 'IN_REPAIR' | 'RETIRED'
 
@@ -187,15 +189,11 @@ const statusMap = computed<Record<AssetStatus, string>>(() => ({
   RETIRED:   t('asset.statusMap.RETIRED'),
 }))
 
-const stats = computed(() => {
-  const c = { AVAILABLE: 0, IN_REPAIR: 0 }
-  assets.value.forEach(a => { if (a.status in c) c[a.status as 'AVAILABLE' | 'IN_REPAIR']++ })
-  return [
-    { label: '正常使用', value: c.AVAILABLE,       color: '#12b76a' },
-    { label: '申請中',   value: pendingCount.value, color: '#2e90fa' },
-    { label: '維修中',   value: c.IN_REPAIR,        color: '#f79009' },
-  ]
-})
+const stats = computed(() => [
+  { label: '正常使用', value: availableCount.value, color: '#12b76a' },
+  { label: '申請中',   value: pendingCount.value,   color: '#2e90fa' },
+  { label: '維修中',   value: inRepairCount.value,  color: '#f79009' },
+])
 
 function formatDate(d: string | null | undefined): string {
   if (!d) return '—'
@@ -267,14 +265,20 @@ async function submitRepair() {
   finally { repairLoading.value = false }
 }
 
-async function fetchPendingCount() {
+async function fetchStatCounts() {
   try {
-    const res = await applicationApi.list({ status: 'PENDING', limit: 1 })
-    pendingCount.value = res.data.total ?? 0
+    const [avail, repair, pending] = await Promise.all([
+      assetApi.list({ status: 'AVAILABLE', limit: 1 }),
+      assetApi.list({ status: 'IN_REPAIR', limit: 1 }),
+      applicationApi.list({ status: 'PENDING', limit: 1 }),
+    ])
+    availableCount.value = avail.data.total   ?? 0
+    inRepairCount.value  = repair.data.total  ?? 0
+    pendingCount.value   = pending.data.total ?? 0
   } catch { /* silent */ }
 }
 
-onMounted(() => { fetchAssets(); fetchPendingCount() })
+onMounted(() => { fetchAssets(); fetchStatCounts() })
 </script>
 
 <style scoped>

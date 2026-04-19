@@ -222,10 +222,23 @@ const statusMap = computed<Record<AppStatus, string>>(() => ({
   REJECTED:  t('application.statusMap.REJECTED'),
 }))
 
-const pendingCount   = computed(() => applications.value.filter(a => a.status === 'PENDING').length)
-const inRepairCount  = computed(() => applications.value.filter(a => a.status === 'IN_REPAIR').length)
-const completedCount = computed(() => applications.value.filter(a => a.status === 'COMPLETED').length)
-const rejectedCount  = computed(() => applications.value.filter(a => a.status === 'REJECTED').length)
+const pendingCount   = ref(0)
+const inRepairCount  = ref(0)
+const completedCount = ref(0)
+const rejectedCount  = ref(0)
+
+async function fetchKpis() {
+  const [p, r, c, j] = await Promise.all([
+    applicationApi.list({ status: 'PENDING',   limit: 1 }),
+    applicationApi.list({ status: 'IN_REPAIR', limit: 1 }),
+    applicationApi.list({ status: 'COMPLETED', limit: 1 }),
+    applicationApi.list({ status: 'REJECTED',  limit: 1 }),
+  ])
+  pendingCount.value   = p.data.total ?? 0
+  inRepairCount.value  = r.data.total ?? 0
+  completedCount.value = c.data.total ?? 0
+  rejectedCount.value  = j.data.total ?? 0
+}
 
 function formatDate(d: string | null | undefined): string {
   if (!d) return '—'
@@ -267,7 +280,7 @@ async function submitReview() {
     })
     ElMessage.success(t('common.success'))
     reviewVisible.value = false
-    fetchApplications()
+    fetchApplications(); fetchKpis()
   } catch { ElMessage.error(t('common.error')) }
   finally { reviewLoading.value = false }
 }
@@ -320,11 +333,11 @@ async function handleComplete(row: Application) {
   try {
     await applicationApi.complete(row.id)
     ElMessage.success('維修完成，資產已恢復正常使用')
-    fetchApplications()
+    fetchApplications(); fetchKpis()
   } catch { ElMessage.error(t('common.error')) }
 }
 
-onMounted(fetchApplications)
+onMounted(() => { fetchApplications(); fetchKpis() })
 </script>
 
 <style scoped>

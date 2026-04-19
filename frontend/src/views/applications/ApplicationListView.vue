@@ -131,7 +131,7 @@ const statusMap = computed<Record<AppStatus, string>>(() => ({
   REJECTED:  t('application.statusMap.REJECTED'),
 }))
 
-const pendingCount = computed(() => applications.value.filter(a => a.status === 'PENDING').length)
+const pendingCount = ref(0)
 
 const tabs = computed(() => [
   { label: '全部',                          value: '' },
@@ -145,6 +145,7 @@ function switchTab(val: string) {
   filters.status = val
   page.value = 1
   fetchApplications()
+  fetchPendingCount()
 }
 
 function formatDate(d: string | null | undefined): string {
@@ -162,7 +163,14 @@ async function fetchApplications() {
   finally { loading.value = false }
 }
 
-onMounted(fetchApplications)
+async function fetchPendingCount() {
+  try {
+    const res = await applicationApi.list({ status: 'PENDING', limit: 1 })
+    pendingCount.value = res.data.total ?? 0
+  } catch { /* silent */ }
+}
+
+onMounted(() => { fetchApplications(); fetchPendingCount() })
 </script>
 
 <style scoped>

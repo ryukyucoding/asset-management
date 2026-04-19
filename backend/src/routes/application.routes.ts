@@ -1,12 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import { ApplicationRepository } from '@infrastructure/repositories/application.repository';
 import { AssetRepository } from '@infrastructure/repositories/asset.repository';
+import { NotificationRepository } from '@infrastructure/repositories/notification.repository';
 import { prisma } from '@infrastructure/database/prisma.client';
 import { CreateApplicationDTO, ReviewApplicationDTO, RepairDetailsDTO, ApplicationQueryDTO } from '@dtos/application.dto';
 import { authMiddleware, requireRole } from '@middleware/auth.middleware';
 
-const applicationRepo = new ApplicationRepository();
-const assetRepo       = new AssetRepository();
+const applicationRepo  = new ApplicationRepository();
+const assetRepo        = new AssetRepository();
+const notificationRepo = new NotificationRepository();
 
 export async function applicationRoutes(fastify: FastifyInstance): Promise<void> {
   // ─── 查詢申請列表 ─────────────────────────────────────────────
@@ -56,6 +58,16 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
       repairVendor:     null,
     });
 
+    // 通知所有管理員有新的維修申請
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
+    await Promise.all(admins.map(admin =>
+      notificationRepo.create({
+        userId:  admin.id,
+        type:    'APPLICATION_SUBMITTED',
+        message: `「${asset.name}」有新的維修申請待審核`,
+      })
+    ));
+
     return reply.status(201).send(application);
   });
 
@@ -88,6 +100,16 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
     if (newStatus === 'IN_REPAIR') {
       await assetRepo.update(application.assetId, { status: 'IN_REPAIR' });
     }
+
+    // 通知申請人審核結果
+    const reviewedAsset = await assetRepo.findById(application.assetId);
+    await notificationRepo.create({
+      userId:  application.userId,
+      type:    newStatus === 'IN_REPAIR' ? 'APPLICATION_APPROVED' : 'APPLICATION_REJECTED',
+      message: newStatus === 'IN_REPAIR'
+        ? `你的「${reviewedAsset?.name ?? '資產'}」維修申請已通過審核，進入維修中`
+        : `你的「${reviewedAsset?.name ?? '資產'}」維修申請已被拒絕${body.data.comment ? `：${body.data.comment}` : ''}`,
+    });
 
     return reply.send(updated);
   });
@@ -124,7 +146,15 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
 
     const updated = await applicationRepo.update(id, { status: 'COMPLETED' });
     // 資產恢復正常使用
+    const completedAsset = await assetRepo.findById(application.assetId);
     await assetRepo.update(application.assetId, { status: 'AVAILABLE' });
+
+    // 通知申請人維修完成
+    await notificationRepo.create({
+      userId:  application.userId,
+      type:    'REPAIR_COMPLETED',
+      message: `你的「${completedAsset?.name ?? '資產'}」已維修完成，可正常使用`,
+    });
 
     return reply.send(updated);
   });
