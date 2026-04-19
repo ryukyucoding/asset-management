@@ -153,6 +153,8 @@ import { applicationApi } from '@/apis/application'
 import StatusBadge from '@/components/StatusBadge.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 
+const pendingCount = ref(0)
+
 type AssetStatus = 'AVAILABLE' | 'IN_REPAIR' | 'RETIRED'
 
 interface Asset {
@@ -186,12 +188,12 @@ const statusMap = computed<Record<AssetStatus, string>>(() => ({
 }))
 
 const stats = computed(() => {
-  const c = { AVAILABLE: 0, IN_REPAIR: 0, RETIRED: 0 }
-  assets.value.forEach(a => { if (a.status in c) c[a.status as AssetStatus]++ })
+  const c = { AVAILABLE: 0, IN_REPAIR: 0 }
+  assets.value.forEach(a => { if (a.status in c) c[a.status as 'AVAILABLE' | 'IN_REPAIR']++ })
   return [
-    { label: '正常使用', value: c.AVAILABLE, color: '#12b76a' },
-    { label: '維修中',   value: c.IN_REPAIR, color: '#f79009' },
-    { label: '已報廢',   value: c.RETIRED,   color: '#9ca3af' },
+    { label: '正常使用', value: c.AVAILABLE,       color: '#12b76a' },
+    { label: '申請中',   value: pendingCount.value, color: '#2e90fa' },
+    { label: '維修中',   value: c.IN_REPAIR,        color: '#f79009' },
   ]
 })
 
@@ -265,7 +267,14 @@ async function submitRepair() {
   finally { repairLoading.value = false }
 }
 
-onMounted(fetchAssets)
+async function fetchPendingCount() {
+  try {
+    const res = await applicationApi.list({ status: 'PENDING', limit: 1 })
+    pendingCount.value = res.data.total ?? 0
+  } catch { /* silent */ }
+}
+
+onMounted(() => { fetchAssets(); fetchPendingCount() })
 </script>
 
 <style scoped>

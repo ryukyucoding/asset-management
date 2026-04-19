@@ -87,6 +87,12 @@
         <el-table-column :label="t('asset.assignedDept')" prop="assignedDept" width="110">
           <template #default="{ row }">{{ row.assignedDept ?? '—' }}</template>
         </el-table-column>
+        <el-table-column label="負責人" width="110">
+          <template #default="{ row }">
+            <span v-if="row.holderId" class="holder-name">{{ holderMap[row.holderId] ?? '—' }}</span>
+            <span v-else class="text-muted">未指定</span>
+          </template>
+        </el-table-column>
         <el-table-column :label="t('asset.status')" width="110">
           <template #default="{ row }">
             <StatusBadge :status="row.status" :label="statusMap[row.status as AssetStatus]" />
@@ -199,6 +205,26 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <el-form-item label="負責人">
+              <el-autocomplete
+                v-model="holderInput"
+                :fetch-suggestions="queryHolders"
+                placeholder="輸入姓名或部門搜尋"
+                clearable
+                style="width:100%"
+                value-key="label"
+                @select="onHolderSelect"
+                @clear="onHolderClear"
+                @blur="onHolderBlur"
+              >
+                <template #default="{ item }">
+                  <span class="holder-option-name">{{ item.name }}</span>
+                  <span v-if="item.department" class="holder-option-dept"> · {{ item.department }}</span>
+                </template>
+              </el-autocomplete>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
             <el-form-item :label="t('asset.startDate')">
               <el-date-picker v-model="form.startDate" type="date" style="width:100%" value-format="YYYY-MM-DDTHH:mm:ss.000Z" />
             </el-form-item>
@@ -236,6 +262,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, Search, Edit, Delete } from '@element-plus/icons-vue'
 import { assetApi } from '@/apis/asset'
+import { userApi, type UserSummary } from '@/apis/user'
 import StatusBadge from '@/components/StatusBadge.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 
@@ -269,6 +296,49 @@ const page     = ref(1)
 const pageSize = ref(10)
 const filters  = reactive({ name: '', serialNo: '', category: '', status: '' })
 const categories = ['IT設備', '辦公設備', '實驗器材', '交通工具', 'HIGH_VALUE', '其他']
+const users    = ref<UserSummary[]>([])
+const holderMap = computed<Record<string, string>>(() =>
+  Object.fromEntries(users.value.map(u => [u.id, u.name]))
+)
+const holderInput = ref('')
+
+async function fetchUsers() {
+  try { users.value = (await userApi.list()).data } catch { /* silent */ }
+}
+
+type HolderSuggestion = UserSummary & { label: string; value: string }
+
+function queryHolders(keyword: string, cb: (results: HolderSuggestion[]) => void) {
+  const kw = keyword.trim().toLowerCase()
+  const results = users.value
+    .filter(u =>
+      !kw ||
+      u.name.toLowerCase().includes(kw) ||
+      (u.department ?? '').toLowerCase().includes(kw)
+    )
+    .map(u => ({ ...u, label: `${u.name}${u.department ? ' · ' + u.department : ''}`, value: u.name }))
+  cb(results)
+}
+
+function onHolderSelect(item: HolderSuggestion) {
+  form.holderId  = item.id
+  holderInput.value = item.label
+}
+
+function onHolderClear() {
+  form.holderId  = null
+  holderInput.value = ''
+}
+
+function onHolderBlur() {
+  // 若輸入框的文字與已選的 holder 不符（使用者亂改），還原為已選的顯示名稱
+  if (form.holderId) {
+    const matched = users.value.find(u => u.id === form.holderId)
+    if (matched) holderInput.value = `${matched.name}${matched.department ? ' · ' + matched.department : ''}`
+  } else {
+    holderInput.value = ''
+  }
+}
 
 const statusMap = computed<Record<AssetStatus, string>>(() => ({
   AVAILABLE: t('asset.statusMap.AVAILABLE'),
@@ -326,6 +396,7 @@ const form = reactive({
   purchaseDate: '' as string, warrantyExpiry: '' as string,
   location: '', assignedDept: '', startDate: '' as string,
   status: 'AVAILABLE' as AssetStatus, description: '',
+  holderId: null as string | null,
   imageUrls: [] as string[],
 })
 
@@ -343,8 +414,9 @@ function openCreateDialog() {
     supplier: '', purchaseCost: undefined,
     purchaseDate: '', warrantyExpiry: '',
     location: '', assignedDept: '', startDate: '',
-    status: 'AVAILABLE', description: '', imageUrls: [],
+    status: 'AVAILABLE', description: '', holderId: null, imageUrls: [],
   })
+  holderInput.value = ''
   formVisible.value = true
 }
 
@@ -361,8 +433,13 @@ function openEditDialog(asset: Asset) {
     assignedDept:   asset.assignedDept  ?? '',
     startDate:      asset.startDate     ?? '',
     description:    asset.description   ?? '',
+    holderId:       asset.holderId      ?? null,
     imageUrls:      asset.imageUrls     ?? [],
   })
+  const holder = users.value.find(u => u.id === asset.holderId)
+  holderInput.value = holder
+    ? `${holder.name}${holder.department ? ' · ' + holder.department : ''}`
+    : ''
   formVisible.value = true
 }
 
@@ -386,6 +463,7 @@ async function submitForm() {
       startDate:      form.startDate || undefined,
       status:         editingId.value ? form.status : undefined,
       description:    form.description || undefined,
+      holderId:       form.holderId || undefined,
       imageUrls:      form.imageUrls,
     }
     if (editingId.value) {
@@ -409,7 +487,7 @@ async function handleDelete(asset: Asset) {
   } catch { ElMessage.error(t('common.error')) }
 }
 
-onMounted(fetchAssets)
+onMounted(() => { fetchAssets(); fetchUsers() })
 </script>
 
 <style scoped>
@@ -459,6 +537,10 @@ onMounted(fetchAssets)
 .warranty-expired { color: var(--el-color-danger); }
 
 .row-actions { display: flex; gap: 6px; align-items: center; }
+.holder-name { font-weight: 500; color: var(--c-text-1); }
+.text-muted { color: var(--c-text-3); font-size: 12px; }
+.holder-option-name { font-weight: 500; color: var(--c-text-1); }
+.holder-option-dept { color: var(--c-text-3); font-size: 12px; }
 
 .table-footer {
   display: flex; align-items: center; justify-content: space-between;

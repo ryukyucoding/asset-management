@@ -10,7 +10,9 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
     const query = AssetQueryDTO.safeParse(request.query);
     if (!query.success) return reply.status(400).send({ error: 'VALIDATION_ERROR', details: query.error.flatten() });
 
-    const result = await assetRepo.findAll(query.data);
+    // 一般用戶只能看自己負責的資產
+    const holderId = request.user.role === 'USER' ? request.user.userId : query.data.holderId;
+    const result = await assetRepo.findAll({ ...query.data, holderId });
     return reply.send(result);
   });
 

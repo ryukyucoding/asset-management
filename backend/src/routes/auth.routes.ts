@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { AuthService } from '@services/auth/auth.service';
 import { UserRepository } from '@infrastructure/repositories/user.repository';
 import { LoginDTO, RegisterDTO } from '@dtos/auth.dto';
-import { authMiddleware } from '@middleware/auth.middleware';
+import { authMiddleware, requireRole } from '@middleware/auth.middleware';
 import { verifyRefreshToken, signAccessToken } from '@services/auth/auth.service';
 
 const userRepo = new UserRepository();
@@ -54,5 +54,10 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
   fastify.post('/auth/logout', { preHandler: [authMiddleware] }, async (_request, reply) => {
     return reply.status(204).send();
+  });
+
+  fastify.get('/users', { preHandler: [authMiddleware, requireRole('ADMIN')] }, async (_request, reply) => {
+    const users = await userRepo.findAll();
+    return reply.send(users);
   });
 }
