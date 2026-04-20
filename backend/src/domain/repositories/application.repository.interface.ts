@@ -18,6 +18,8 @@ export interface PaginatedResult<T> {
 export type ApplicationUpdateData = Partial<
   Pick<ApplicationEntity,
     | 'status'
+    | 'faultDescription'
+    | 'imageUrls'
     | 'repairDate'
     | 'repairContent'
     | 'repairSolution'

@@ -50,9 +50,10 @@ export default {
     status: '狀態',
     description: '說明',
     statusMap: {
-      AVAILABLE: '正常使用',
-      IN_REPAIR: '維修中',
-      RETIRED: '已報廢',
+      AVAILABLE:      '正常使用',
+      PENDING_REPAIR: '申請維修中',
+      IN_REPAIR:      '維修中',
+      RETIRED:        '已報廢',
     },
   },
   application: {

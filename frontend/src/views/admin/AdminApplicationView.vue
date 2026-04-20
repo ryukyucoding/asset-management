@@ -61,15 +61,13 @@
                   <span class="photo-count-badge">{{ row.imageUrls.length }} 張</span>
                 </div>
                 <div class="photo-grid">
-                  <div v-for="(url, idx) in row.imageUrls" :key="url" class="photo-item">
-                    <el-image
-                      :src="url"
-                      :preview-src-list="row.imageUrls"
-                      :initial-index="idx"
-                      fit="cover"
-                      class="fault-photo"
-                      preview-teleported
-                    />
+                  <div
+                    v-for="(url, idx) in row.imageUrls"
+                    :key="url"
+                    class="photo-item"
+                    @click="openViewer(row.imageUrls, idx)"
+                  >
+                    <img :src="url" class="fault-photo" alt="故障照片" />
                     <button class="photo-dl-btn" title="下載此照片" @click.stop="downloadPhoto(url, idx + 1)">
                       <el-icon><Download /></el-icon>
                     </button>
@@ -111,9 +109,15 @@
           <template #default="{ row }">
             <div class="fault-cell">
               <span class="fault-text" :title="row.faultDescription">{{ row.faultDescription }}</span>
-              <span v-if="row.imageUrls?.length" class="photo-pill">
+              <button
+                v-if="row.imageUrls?.length"
+                type="button"
+                class="photo-pill"
+                :title="`查看 ${row.imageUrls.length} 張故障照片`"
+                @click.stop="openViewer(row.imageUrls, 0)"
+              >
                 <el-icon><Camera /></el-icon>{{ row.imageUrls.length }}
-              </span>
+              </button>
             </div>
           </template>
         </el-table-column>
@@ -211,14 +215,89 @@
         <el-button type="primary" :loading="repairDetailsLoading" @click="submitRepairDetails">{{ t('common.save') }}</el-button>
       </template>
     </el-dialog>
+
+    <!-- 故障照片 Viewer -->
+    <el-dialog
+      v-model="viewerVisible"
+      :show-close="false"
+      class="photo-viewer-dialog"
+      width="min(90vw, 960px)"
+      align-center
+      destroy-on-close
+    >
+      <template #header>
+        <div class="viewer-header">
+          <span class="viewer-counter">
+            <el-icon><Camera /></el-icon>
+            故障照片 {{ viewerIndex + 1 }} / {{ viewerUrls.length }}
+          </span>
+          <el-button type="info" plain size="small" circle @click="viewerVisible = false">
+            <el-icon><Close /></el-icon>
+          </el-button>
+        </div>
+      </template>
+
+      <div class="viewer-stage" @wheel.prevent="onViewerWheel">
+        <button
+          v-if="viewerUrls.length > 1"
+          type="button"
+          class="viewer-arrow viewer-arrow-prev"
+          @click="viewerPrev"
+        >
+          <el-icon><ArrowLeft /></el-icon>
+        </button>
+        <div class="viewer-img-wrap">
+          <img
+            :src="viewerCurrentUrl"
+            class="viewer-img"
+            :style="{ transform: `scale(${viewerScale}) rotate(${viewerRotate}deg)` }"
+            draggable="false"
+            alt="故障照片"
+          />
+        </div>
+        <button
+          v-if="viewerUrls.length > 1"
+          type="button"
+          class="viewer-arrow viewer-arrow-next"
+          @click="viewerNext"
+        >
+          <el-icon><ArrowRight /></el-icon>
+        </button>
+      </div>
+
+      <template #footer>
+        <div class="viewer-toolbar">
+          <div class="viewer-controls">
+            <!-- 旋轉 -->
+            <div class="viewer-btn-group">
+              <el-button :icon="RefreshLeft"  circle plain size="small" title="向左旋轉 90°（[）" @click="viewerRotateLeft" />
+              <el-button :icon="RefreshRight" circle plain size="small" title="向右旋轉 90°（]）" @click="viewerRotateRight" />
+            </div>
+            <div class="viewer-divider" />
+            <!-- 縮放 -->
+            <div class="viewer-btn-group">
+              <el-button :icon="ZoomOut" circle plain size="small" title="縮小（-）" @click="viewerZoomOut" />
+              <span class="viewer-zoom-label" title="點擊重置縮放（0）" @click="viewerReset">
+                {{ Math.round(viewerScale * 100) }}%
+              </span>
+              <el-button :icon="ZoomIn" circle plain size="small" title="放大（+）" @click="viewerZoomIn" />
+            </div>
+            <div class="viewer-divider" />
+            <!-- 重置 -->
+            <el-button :icon="Refresh" circle plain size="small" title="重置縮放與旋轉（0）" @click="viewerReset" />
+          </div>
+          <el-button type="primary" :icon="Download" @click="downloadCurrentPhoto">下載</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
-import { Camera, Download } from '@element-plus/icons-vue'
+import { Camera, Download, Close, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, RefreshLeft, RefreshRight, Refresh } from '@element-plus/icons-vue'
 import { applicationApi } from '@/apis/application'
 import StatusBadge from '@/components/StatusBadge.vue'
 
@@ -361,7 +440,58 @@ async function submitRepairDetails() {
   finally { repairDetailsLoading.value = false }
 }
 
-// ─── 故障照片下載 ──────────────────────────────────────────────────────────
+// ─── 故障照片 Viewer ───────────────────────────────────────────────────────
+const viewerVisible    = ref(false)
+const viewerUrls       = ref<string[]>([])
+const viewerIndex      = ref(0)
+const viewerScale      = ref(1)
+const viewerRotate     = ref(0)   // degrees: 0 / 90 / 180 / 270
+const viewerCurrentUrl = computed(() => viewerUrls.value[viewerIndex.value] ?? '')
+
+function openViewer(urls: string[], index = 0) {
+  if (!urls.length) return
+  viewerUrls.value    = urls
+  viewerIndex.value   = index
+  viewerScale.value   = 1
+  viewerRotate.value  = 0
+  viewerVisible.value = true
+}
+
+function viewerPrev() {
+  viewerIndex.value  = (viewerIndex.value - 1 + viewerUrls.value.length) % viewerUrls.value.length
+  viewerScale.value  = 1
+  viewerRotate.value = 0
+}
+function viewerNext() {
+  viewerIndex.value  = (viewerIndex.value + 1) % viewerUrls.value.length
+  viewerScale.value  = 1
+  viewerRotate.value = 0
+}
+function viewerZoomIn()      { viewerScale.value  = Math.min(viewerScale.value + 0.25, 4) }
+function viewerZoomOut()     { viewerScale.value  = Math.max(viewerScale.value - 0.25, 0.25) }
+function viewerRotateLeft()  { viewerRotate.value = (viewerRotate.value - 90 + 360) % 360 }
+function viewerRotateRight() { viewerRotate.value = (viewerRotate.value + 90) % 360 }
+function viewerReset()       { viewerScale.value  = 1; viewerRotate.value = 0 }
+
+function onViewerWheel(e: WheelEvent) {
+  e.deltaY < 0 ? viewerZoomIn() : viewerZoomOut()
+}
+
+function onViewerKeydown(e: KeyboardEvent) {
+  if      (e.key === 'ArrowLeft')       viewerPrev()
+  else if (e.key === 'ArrowRight')      viewerNext()
+  else if (e.key === '+' || e.key === '=') viewerZoomIn()
+  else if (e.key === '-')               viewerZoomOut()
+  else if (e.key === '[')               viewerRotateLeft()
+  else if (e.key === ']')               viewerRotateRight()
+  else if (e.key === '0')               viewerReset()
+}
+
+watch(viewerVisible, (v) => {
+  if (v) document.addEventListener('keydown', onViewerKeydown)
+  else   document.removeEventListener('keydown', onViewerKeydown)
+})
+
 async function downloadPhoto(url: string, index: number) {
   try {
     const res  = await fetch(url)
@@ -375,6 +505,10 @@ async function downloadPhoto(url: string, index: number) {
   } catch {
     ElMessage.error('下載失敗，請稍後再試')
   }
+}
+
+async function downloadCurrentPhoto() {
+  await downloadPhoto(viewerCurrentUrl.value, viewerIndex.value + 1)
 }
 
 // ─── 維修完成 ──────────────────────────────────────────────────────────────
@@ -483,6 +617,12 @@ onMounted(() => { fetchApplications(); fetchKpis() })
   font-weight: 600;
   line-height: 1.6;
   border: 1px solid #bfdbfe;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.photo-pill:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
 }
 .photo-pill .el-icon { font-size: 11px; }
 
@@ -555,4 +695,127 @@ onMounted(() => { fetchApplications(); fetchKpis() })
   background: rgba(37, 99, 235, 0.85);
 }
 .photo-dl-btn .el-icon { font-size: 13px; }
+
+/* ── 故障照片 Viewer ─────────────────────────────────────────────────────── */
+:deep(.photo-viewer-dialog .el-dialog__header) {
+  background: #ffffff;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  margin: 0;
+}
+:deep(.photo-viewer-dialog .el-dialog__body) {
+  padding: 0;
+  background: #f3f4f6;
+}
+:deep(.photo-viewer-dialog .el-dialog__footer) {
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  padding: 10px 16px;
+}
+
+.viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.viewer-counter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+.viewer-counter .el-icon { color: #2563eb; }
+
+.viewer-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: min(65vh, 600px);
+  background: #f3f4f6;
+  overflow: hidden;
+  user-select: none;
+}
+
+.viewer-img-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.viewer-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.18s ease;
+  cursor: zoom-in;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.viewer-img:active { cursor: grabbing; }
+
+/* 左右切換箭頭：深色、醒目 */
+.viewer-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #1f2937;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  transition: background 0.15s, transform 0.15s;
+}
+.viewer-arrow:hover {
+  background: #111827;
+  transform: translateY(-50%) scale(1.08);
+}
+.viewer-arrow-prev { left: 14px; }
+.viewer-arrow-next { right: 14px; }
+
+/* 工具列 */
+.viewer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.viewer-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.viewer-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.viewer-divider {
+  width: 1px;
+  height: 20px;
+  background: #e5e7eb;
+  margin: 0 4px;
+}
+.viewer-zoom-label {
+  min-width: 46px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+.viewer-zoom-label:hover { color: #2563eb; }
 </style>

@@ -19,6 +19,11 @@ export const RepairDetailsDTO = z.object({
   repairVendor:   z.string().optional(),
 });
 
+export const UpdateApplicationDTO = z.object({
+  faultDescription: z.string().min(5).optional(),
+  imageUrls:        z.array(z.string()).optional(),
+});
+
 export const ApplicationQueryDTO = z.object({
   status:  z.enum(['PENDING', 'IN_REPAIR', 'COMPLETED', 'REJECTED']).optional(),
   assetId: z.string().optional(),
@@ -30,4 +35,5 @@ export const ApplicationQueryDTO = z.object({
 export type CreateApplicationDTOType = z.infer<typeof CreateApplicationDTO>;
 export type ReviewApplicationDTOType = z.infer<typeof ReviewApplicationDTO>;
 export type RepairDetailsDTOType     = z.infer<typeof RepairDetailsDTO>;
+export type UpdateApplicationDTOType = z.infer<typeof UpdateApplicationDTO>;
 export type ApplicationQueryDTOType  = z.infer<typeof ApplicationQueryDTO>;

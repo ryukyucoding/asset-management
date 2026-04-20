@@ -52,9 +52,10 @@ const en: MessageSchema = {
     status: 'Status',
     description: 'Description',
     statusMap: {
-      AVAILABLE: 'Available',
-      IN_REPAIR: 'In Repair',
-      RETIRED: 'Retired',
+      AVAILABLE:      'Available',
+      PENDING_REPAIR: 'Repair Requested',
+      IN_REPAIR:      'In Repair',
+      RETIRED:        'Retired',
     },
   },
   application: {

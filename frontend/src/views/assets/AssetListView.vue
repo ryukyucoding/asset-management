@@ -77,7 +77,7 @@
           </template>
         </el-table-column>
         <el-table-column :label="t('asset.location')" prop="location" width="130" />
-        <el-table-column :label="t('asset.status')" width="110">
+        <el-table-column :label="t('asset.status')" width="130">
           <template #default="{ row }">
             <StatusBadge :status="row.status" :label="statusMap[row.status as AssetStatus]" />
           </template>
@@ -157,7 +157,7 @@ const pendingCount      = ref(0)
 const availableCount    = ref(0)
 const inRepairCount     = ref(0)
 
-type AssetStatus = 'AVAILABLE' | 'IN_REPAIR' | 'RETIRED'
+type AssetStatus = 'AVAILABLE' | 'PENDING_REPAIR' | 'IN_REPAIR' | 'RETIRED'
 
 interface Asset {
   id: string
@@ -184,15 +184,16 @@ const filters  = reactive({ name: '', serialNo: '', category: '', status: '', lo
 const categories = ['IT設備', '辦公設備', '實驗器材', '交通工具', 'HIGH_VALUE', '其他']
 
 const statusMap = computed<Record<AssetStatus, string>>(() => ({
-  AVAILABLE: t('asset.statusMap.AVAILABLE'),
-  IN_REPAIR: t('asset.statusMap.IN_REPAIR'),
-  RETIRED:   t('asset.statusMap.RETIRED'),
+  AVAILABLE:      t('asset.statusMap.AVAILABLE'),
+  PENDING_REPAIR: t('asset.statusMap.PENDING_REPAIR'),
+  IN_REPAIR:      t('asset.statusMap.IN_REPAIR'),
+  RETIRED:        t('asset.statusMap.RETIRED'),
 }))
 
 const stats = computed(() => [
-  { label: '正常使用', value: availableCount.value, color: '#12b76a' },
-  { label: '申請中',   value: pendingCount.value,   color: '#2e90fa' },
-  { label: '維修中',   value: inRepairCount.value,  color: '#f79009' },
+  { label: '正常使用',   value: availableCount.value, color: '#12b76a' },
+  { label: '申請維修中', value: pendingCount.value,   color: '#2e90fa' },
+  { label: '維修中',     value: inRepairCount.value,  color: '#f79009' },
 ])
 
 function formatDate(d: string | null | undefined): string {
@@ -267,14 +268,14 @@ async function submitRepair() {
 
 async function fetchStatCounts() {
   try {
-    const [avail, repair, pending] = await Promise.all([
-      assetApi.list({ status: 'AVAILABLE', limit: 1 }),
-      assetApi.list({ status: 'IN_REPAIR', limit: 1 }),
-      applicationApi.list({ status: 'PENDING', limit: 1 }),
+    const [avail, pending, repair] = await Promise.all([
+      assetApi.list({ status: 'AVAILABLE',      limit: 1 }),
+      assetApi.list({ status: 'PENDING_REPAIR', limit: 1 }),
+      assetApi.list({ status: 'IN_REPAIR',      limit: 1 }),
     ])
     availableCount.value = avail.data.total   ?? 0
-    inRepairCount.value  = repair.data.total  ?? 0
     pendingCount.value   = pending.data.total ?? 0
+    inRepairCount.value  = repair.data.total  ?? 0
   } catch { /* silent */ }
 }
 

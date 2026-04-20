@@ -1,4 +1,4 @@
-export type AssetStatus = 'AVAILABLE' | 'IN_REPAIR' | 'RETIRED';
+export type AssetStatus = 'AVAILABLE' | 'PENDING_REPAIR' | 'IN_REPAIR' | 'RETIRED';
 
 export interface AssetEntity {
   id: string;

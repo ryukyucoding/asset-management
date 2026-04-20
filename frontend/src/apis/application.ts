@@ -13,6 +13,11 @@ export interface CreateApplicationData {
   imageUrls?: string[]
 }
 
+export interface UpdateApplicationData {
+  faultDescription?: string
+  imageUrls?: string[]
+}
+
 export interface RepairDetailsData {
   repairDate?: string
   repairContent?: string
@@ -25,6 +30,7 @@ export const applicationApi = {
   list: (query: ApplicationQuery = {}) => http.get('/applications', { params: query }),
   get: (id: string) => http.get(`/applications/${id}`),
   create: (data: CreateApplicationData) => http.post('/applications', data),
+  update: (id: string, data: UpdateApplicationData) => http.patch(`/applications/${id}`, data),
   approve: (id: string, data: { action: 'APPROVED' | 'REJECTED'; comment?: string }) =>
     http.patch(`/applications/${id}/approve`, data),
   repairDetails: (id: string, data: RepairDetailsData) =>

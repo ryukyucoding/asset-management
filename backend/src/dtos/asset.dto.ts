@@ -31,7 +31,7 @@ export const UpdateAssetDTO = z.object({
   startDate:     z.string().datetime().optional(),
   warrantyExpiry: z.string().datetime().optional(),
   holderId:      z.string().cuid().nullable().optional(),
-  status:        z.enum(['AVAILABLE', 'IN_REPAIR', 'RETIRED']).optional(),
+  status:        z.enum(['AVAILABLE', 'PENDING_REPAIR', 'IN_REPAIR', 'RETIRED']).optional(),
   description:   z.string().optional(),
   imageUrls:     z.array(z.string().url()).optional(),
 });
@@ -43,7 +43,7 @@ export const AssetQueryDTO = z.object({
   location:    z.string().optional(),
   assignedDept: z.string().optional(),
   holderId:    z.string().optional(),
-  status:      z.enum(['AVAILABLE', 'IN_REPAIR', 'RETIRED']).optional(),
+  status:      z.enum(['AVAILABLE', 'PENDING_REPAIR', 'IN_REPAIR', 'RETIRED']).optional(),
   page:        z.coerce.number().int().positive().default(1),
   limit:       z.coerce.number().int().positive().max(100).default(20),
 });

@@ -12,17 +12,18 @@ const props = defineProps<{ status: string; label: string }>()
 
 const variant = computed(() => {
   const map: Record<string, string> = {
-    AVAILABLE: 'success',
-    APPROVED:  'success',
-    COMPLETED: 'success',
-    IN_REPAIR: 'warning',
-    PENDING:   'pending',
-    BORROWED:  'warning',
-    CLAIMED:   'info',
-    RETURNED:  'neutral',
-    REJECTED:  'danger',
-    CANCELLED: 'neutral',
-    RETIRED:   'danger',
+    AVAILABLE:      'success',
+    APPROVED:       'success',
+    COMPLETED:      'success',
+    IN_REPAIR:      'warning',
+    PENDING:        'pending',
+    PENDING_REPAIR: 'notice',
+    BORROWED:       'warning',
+    CLAIMED:        'info',
+    RETURNED:       'neutral',
+    REJECTED:       'danger',
+    CANCELLED:      'neutral',
+    RETIRED:        'danger',
   }
   return map[props.status] ?? 'neutral'
 })
@@ -65,4 +66,7 @@ const variant = computed(() => {
 
 .badge--neutral { background: var(--c-neutral-soft); color: #4b5563; }
 .badge--neutral .badge-dot { background: #9ca3af; }
+
+.badge--notice { background: #fff7ed; color: #c2410c; }
+.badge--notice .badge-dot { background: #f97316; }
 </style>

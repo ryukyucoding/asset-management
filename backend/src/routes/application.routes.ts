@@ -3,7 +3,7 @@ import { ApplicationRepository } from '@infrastructure/repositories/application.
 import { AssetRepository } from '@infrastructure/repositories/asset.repository';
 import { NotificationRepository } from '@infrastructure/repositories/notification.repository';
 import { prisma } from '@infrastructure/database/prisma.client';
-import { CreateApplicationDTO, ReviewApplicationDTO, RepairDetailsDTO, ApplicationQueryDTO } from '@dtos/application.dto';
+import { CreateApplicationDTO, ReviewApplicationDTO, RepairDetailsDTO, ApplicationQueryDTO, UpdateApplicationDTO } from '@dtos/application.dto';
 import { authMiddleware, requireRole } from '@middleware/auth.middleware';
 
 const applicationRepo  = new ApplicationRepository();
@@ -58,6 +58,9 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
       repairVendor:     null,
     });
 
+    // 資產標記為「申請維修中」，讓使用者可見狀態變化
+    await assetRepo.update(body.data.assetId, { status: 'PENDING_REPAIR' });
+
     // 通知所有管理員有新的維修申請
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
     await Promise.all(admins.map(admin =>
@@ -69,6 +72,25 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
     ));
 
     return reply.status(201).send(application);
+  });
+
+  // ─── 申請人修改申請內容（僅 PENDING 可編輯）──────────────────
+  fastify.patch('/applications/:id', { preHandler: [authMiddleware] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = UpdateApplicationDTO.safeParse(request.body);
+    if (!body.success) return reply.status(400).send({ error: 'VALIDATION_ERROR', details: body.error.flatten() });
+
+    const application = await applicationRepo.findById(id);
+    if (!application) return reply.status(404).send({ error: 'NOT_FOUND' });
+    if (application.userId !== request.user.userId) {
+      return reply.status(403).send({ error: 'FORBIDDEN' });
+    }
+    if (application.status !== 'PENDING') {
+      return reply.status(409).send({ error: 'CONFLICT', message: 'Only PENDING applications can be edited' });
+    }
+
+    const updated = await applicationRepo.update(id, body.data);
+    return reply.send(updated);
   });
 
   // ─── 審核（同意 → 維修中 / 拒絕）────────────────────────────
@@ -96,9 +118,11 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
     const newStatus = body.data.action === 'APPROVED' ? 'IN_REPAIR' : 'REJECTED';
     const updated = await applicationRepo.update(id, { status: newStatus });
 
-    // 審核通過 → 資產狀態改為維修中
+    // 審核通過 → 資產改為維修中；審核拒絕 → 資產恢復正常使用
     if (newStatus === 'IN_REPAIR') {
       await assetRepo.update(application.assetId, { status: 'IN_REPAIR' });
+    } else {
+      await assetRepo.update(application.assetId, { status: 'AVAILABLE' });
     }
 
     // 通知申請人審核結果

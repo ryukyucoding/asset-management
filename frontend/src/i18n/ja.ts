@@ -52,9 +52,10 @@ const ja: MessageSchema = {
     status: 'ステータス',
     description: '説明',
     statusMap: {
-      AVAILABLE: '使用中',
-      IN_REPAIR: '修理中',
-      RETIRED: '廃棄済み',
+      AVAILABLE:      '使用中',
+      PENDING_REPAIR: '修理申請中',
+      IN_REPAIR:      '修理中',
+      RETIRED:        '廃棄済み',
     },
   },
   application: {

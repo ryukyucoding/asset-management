@@ -52,9 +52,10 @@ const ko: MessageSchema = {
     status: '상태',
     description: '설명',
     statusMap: {
-      AVAILABLE: '정상 사용',
-      IN_REPAIR: '수리 중',
-      RETIRED: '폐기',
+      AVAILABLE:      '정상 사용',
+      PENDING_REPAIR: '수리 신청 중',
+      IN_REPAIR:      '수리 중',
+      RETIRED:        '폐기',
     },
   },
   application: {

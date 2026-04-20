@@ -251,6 +251,22 @@ describe('POST /applications', () => {
         faultDescription: 'Screen has dead pixels',
       }),
     );
+    // asset status should be set to PENDING_REPAIR after submission
+    expect(assetMocks.update).toHaveBeenCalledWith(ASSET_ID, { status: 'PENDING_REPAIR' });
+  });
+
+  it('409 — asset is already PENDING_REPAIR', async () => {
+    assetMocks.findById.mockResolvedValue(makeAsset({ status: 'PENDING_REPAIR' }));
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/applications',
+      headers: { authorization: `Bearer ${userToken}` },
+      payload: { assetId: ASSET_ID, faultDescription: 'Broken keyboard' },
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toBe('CONFLICT');
   });
 
   it('409 — asset is already IN_REPAIR', async () => {
@@ -338,7 +354,7 @@ describe('PATCH /applications/:id/approve', () => {
     expect(assetMocks.update).toHaveBeenCalledWith(ASSET_ID, { status: 'IN_REPAIR' });
   });
 
-  it('200 — ADMIN rejects: status → REJECTED, asset NOT updated', async () => {
+  it('200 — ADMIN rejects: status → REJECTED, asset restored to AVAILABLE', async () => {
     appMocks.findById.mockResolvedValue(makeApp({ status: 'PENDING' }));
     appMocks.update.mockResolvedValue(makeApp({ status: 'REJECTED' }));
 
@@ -350,7 +366,8 @@ describe('PATCH /applications/:id/approve', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(assetMocks.update).not.toHaveBeenCalled();
+    // asset should be restored to AVAILABLE when rejected
+    expect(assetMocks.update).toHaveBeenCalledWith(ASSET_ID, { status: 'AVAILABLE' });
   });
 
   it('409 — application is not PENDING', async () => {

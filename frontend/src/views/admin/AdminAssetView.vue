@@ -266,7 +266,7 @@ import { userApi, type UserSummary } from '@/apis/user'
 import StatusBadge from '@/components/StatusBadge.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 
-type AssetStatus = 'AVAILABLE' | 'IN_REPAIR' | 'RETIRED'
+type AssetStatus = 'AVAILABLE' | 'PENDING_REPAIR' | 'IN_REPAIR' | 'RETIRED'
 
 interface Asset {
   id: string
@@ -341,9 +341,10 @@ function onHolderBlur() {
 }
 
 const statusMap = computed<Record<AssetStatus, string>>(() => ({
-  AVAILABLE: t('asset.statusMap.AVAILABLE'),
-  IN_REPAIR: t('asset.statusMap.IN_REPAIR'),
-  RETIRED:   t('asset.statusMap.RETIRED'),
+  AVAILABLE:      t('asset.statusMap.AVAILABLE'),
+  PENDING_REPAIR: t('asset.statusMap.PENDING_REPAIR'),
+  IN_REPAIR:      t('asset.statusMap.IN_REPAIR'),
+  RETIRED:        t('asset.statusMap.RETIRED'),
 }))
 
 function formatDate(d: string | null | undefined): string {
