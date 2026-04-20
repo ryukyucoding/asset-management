@@ -54,6 +54,29 @@
                   </el-descriptions-item>
                 </el-descriptions>
               </div>
+              <!-- 故障照片 -->
+              <div v-if="row.imageUrls?.length" class="expand-section">
+                <div class="expand-title">
+                  故障照片
+                  <span class="photo-count-badge">{{ row.imageUrls.length }} 張</span>
+                </div>
+                <div class="photo-grid">
+                  <div v-for="(url, idx) in row.imageUrls" :key="url" class="photo-item">
+                    <el-image
+                      :src="url"
+                      :preview-src-list="row.imageUrls"
+                      :initial-index="idx"
+                      fit="cover"
+                      class="fault-photo"
+                      preview-teleported
+                    />
+                    <button class="photo-dl-btn" title="下載此照片" @click.stop="downloadPhoto(url, idx + 1)">
+                      <el-icon><Download /></el-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <!-- 維修細節（有資料才顯示） -->
               <div v-if="row.status === 'IN_REPAIR' || row.status === 'COMPLETED'" class="expand-section">
                 <div class="expand-title">維修細節</div>
@@ -84,8 +107,15 @@
             <span class="asset-name">{{ row.asset?.name ?? '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('application.faultDescription')" min-width="200" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.faultDescription }}</template>
+        <el-table-column :label="t('application.faultDescription')" min-width="200">
+          <template #default="{ row }">
+            <div class="fault-cell">
+              <span class="fault-text" :title="row.faultDescription">{{ row.faultDescription }}</span>
+              <span v-if="row.imageUrls?.length" class="photo-pill">
+                <el-icon><Camera /></el-icon>{{ row.imageUrls.length }}
+              </span>
+            </div>
+          </template>
         </el-table-column>
         <el-table-column :label="t('application.status')" width="120">
           <template #default="{ row }">
@@ -188,6 +218,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
+import { Camera, Download } from '@element-plus/icons-vue'
 import { applicationApi } from '@/apis/application'
 import StatusBadge from '@/components/StatusBadge.vue'
 
@@ -197,6 +228,7 @@ interface Application {
   id: string
   status: AppStatus
   faultDescription: string
+  imageUrls: string[]
   repairDate: string | null
   repairContent: string | null
   repairSolution: string | null
@@ -329,6 +361,22 @@ async function submitRepairDetails() {
   finally { repairDetailsLoading.value = false }
 }
 
+// ─── 故障照片下載 ──────────────────────────────────────────────────────────
+async function downloadPhoto(url: string, index: number) {
+  try {
+    const res  = await fetch(url)
+    const blob = await res.blob()
+    const ext  = blob.type.split('/')[1] ?? 'jpg'
+    const a    = document.createElement('a')
+    a.href     = URL.createObjectURL(blob)
+    a.download = `fault-photo-${index}.${ext}`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  } catch {
+    ElMessage.error('下載失敗，請稍後再試')
+  }
+}
+
 // ─── 維修完成 ──────────────────────────────────────────────────────────────
 async function handleComplete(row: Application) {
   await ElMessageBox.confirm('確認此資產維修已完成？資產狀態將恢復為正常使用。', '維修完成確認', { type: 'success' })
@@ -408,4 +456,103 @@ onMounted(() => { fetchApplications(); fetchKpis() })
 }
 .total-hint { font-size: 13px; color: var(--c-text-3); }
 .dialog-form { padding: 8px 0; }
+
+/* ── 故障描述欄 ─────────────────────────────────────────────────────────── */
+.fault-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+.fault-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.photo-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 7px 1px 5px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+  border: 1px solid #bfdbfe;
+}
+.photo-pill .el-icon { font-size: 11px; }
+
+/* ── 故障照片區塊 ────────────────────────────────────────────────────────── */
+.expand-title .photo-count-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 0 7px;
+  height: 18px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #bfdbfe;
+  vertical-align: middle;
+}
+
+.photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.photo-item {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  box-shadow: var(--shadow-xs);
+  flex-shrink: 0;
+}
+
+.fault-photo {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: zoom-in;
+}
+
+.fault-photo:hover {
+  opacity: 0.88;
+}
+
+.photo-dl-btn {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  z-index: 1;
+}
+.photo-item:hover .photo-dl-btn {
+  opacity: 1;
+}
+.photo-dl-btn:hover {
+  background: rgba(37, 99, 235, 0.85);
+}
+.photo-dl-btn .el-icon { font-size: 13px; }
 </style>
