@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   const assets = [
     {
       name: 'MacBook Pro 16"',
-      serialNo: 'MBP-001',
+      serialNo: 'IT-00000001',
       category: 'IT設備',
       model: 'MacBook Pro 16" M3 Pro',
       spec: 'M3 Pro / 18GB / 512GB SSD',
@@ -55,7 +55,7 @@ async function main(): Promise<void> {
     },
     {
       name: 'Dell Monitor 27"',
-      serialNo: 'MON-001',
+      serialNo: 'OFC-00000001',
       category: '辦公設備',
       model: 'Dell UltraSharp U2723D',
       spec: '27" 4K USB-C 60W',
@@ -70,7 +70,7 @@ async function main(): Promise<void> {
     },
     {
       name: 'Cisco Switch 48P',
-      serialNo: 'NET-001',
+      serialNo: 'HV-00000001',
       category: 'HIGH_VALUE',
       model: 'Catalyst 9200L-48P',
       spec: '48-port PoE+ / 4x10G SFP+',
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
     },
     {
       name: 'HP LaserJet Pro',
-      serialNo: 'PRN-001',
+      serialNo: 'OFC-00000002',
       category: '辦公設備',
       model: 'HP LaserJet Pro M404dn',
       spec: 'A4 雷射 / 雙面列印 / 網路',
@@ -101,11 +101,23 @@ async function main(): Promise<void> {
   ];
 
   for (const asset of assets) {
-    await prisma.asset.upsert({
-      where: { serialNo: asset.serialNo },
-      update: {},
-      create: { ...asset, status: 'AVAILABLE', holderId: null },
-    });
+    const existing = await prisma.asset.findFirst({ where: { name: asset.name } });
+    if (existing) {
+      // Delete any other asset that already occupies the target serialNo (e.g. test data)
+      await prisma.asset.deleteMany({
+        where: { serialNo: asset.serialNo, id: { not: existing.id } },
+      });
+      await prisma.asset.update({
+        where: { id: existing.id },
+        data:  { serialNo: asset.serialNo },
+      });
+    } else {
+      // Delete any asset occupying the target serialNo before creating
+      await prisma.asset.deleteMany({ where: { serialNo: asset.serialNo } });
+      await prisma.asset.create({
+        data: { ...asset, status: 'AVAILABLE', holderId: null },
+      });
+    }
   }
 
   console.log('Seed completed');

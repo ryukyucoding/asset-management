@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 export const CreateAssetDTO = z.object({
   name:          z.string().min(1),
-  serialNo:      z.string().min(1),
   category:      z.string().min(1),
   model:         z.string().optional(),
   spec:          z.string().optional(),

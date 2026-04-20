@@ -93,7 +93,7 @@
             <span v-else class="text-muted">未指定</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('asset.status')" width="110">
+        <el-table-column :label="t('asset.status')" width="130">
           <template #default="{ row }">
             <StatusBadge :status="row.status" :label="statusMap[row.status as AssetStatus]" />
           </template>
@@ -142,11 +142,6 @@
           <el-col :span="12">
             <el-form-item :label="t('asset.name')" prop="name">
               <el-input v-model="form.name" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('asset.serialNo')" prop="serialNo">
-              <el-input v-model="form.serialNo" :disabled="!!editingId" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -392,7 +387,7 @@ const formLoading = ref(false)
 const formRef     = ref<FormInstance>()
 const editingId   = ref<string | null>(null)
 const form = reactive({
-  name: '', serialNo: '', category: '', model: '', spec: '',
+  name: '', category: '', model: '', spec: '',
   supplier: '', purchaseCost: undefined as number | undefined,
   purchaseDate: '' as string, warrantyExpiry: '' as string,
   location: '', assignedDept: '', startDate: '' as string,
@@ -403,7 +398,6 @@ const form = reactive({
 
 const rules: FormRules = {
   name:     [{ required: true, trigger: 'blur' }],
-  serialNo: [{ required: true, trigger: 'blur' }],
   category: [{ required: true, trigger: 'change' }],
   location: [{ required: true, trigger: 'blur' }],
 }
@@ -411,7 +405,7 @@ const rules: FormRules = {
 function openCreateDialog() {
   editingId.value = null
   Object.assign(form, {
-    name: '', serialNo: '', category: '', model: '', spec: '',
+    name: '', category: '', model: '', spec: '',
     supplier: '', purchaseCost: undefined,
     purchaseDate: '', warrantyExpiry: '',
     location: '', assignedDept: '', startDate: '',
@@ -451,7 +445,6 @@ async function submitForm() {
   try {
     const payload = {
       name:           form.name,
-      serialNo:       form.serialNo,
       category:       form.category,
       model:          form.model || undefined,
       spec:           form.spec || undefined,

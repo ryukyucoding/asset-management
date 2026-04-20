@@ -2,6 +2,34 @@ import type { FastifyInstance } from 'fastify';
 import { AssetRepository } from '@infrastructure/repositories/asset.repository';
 import { CreateAssetDTO, UpdateAssetDTO, AssetQueryDTO } from '@dtos/asset.dto';
 import { authMiddleware, requireRole } from '@middleware/auth.middleware';
+import { prisma } from '@infrastructure/database/prisma.client';
+
+const CATEGORY_PREFIX: Record<string, string> = {
+  'IT設備':   'IT',
+  '辦公設備': 'OFC',
+  '實驗器材': 'LAB',
+  '交通工具': 'VHC',
+  'HIGH_VALUE': 'HV',
+  '其他':     'GEN',
+};
+
+async function generateSerialNo(category: string): Promise<string> {
+  const prefix = CATEGORY_PREFIX[category]
+    ?? category.slice(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, 'X');
+
+  const existing = await prisma.asset.findMany({
+    where:   { serialNo: { startsWith: `${prefix}-` } },
+    select:  { serialNo: true },
+  });
+
+  let maxNum = 0;
+  for (const a of existing) {
+    const num = parseInt(a.serialNo.split('-')[1] ?? '0', 10);
+    if (!isNaN(num) && num > maxNum) maxNum = num;
+  }
+
+  return `${prefix}-${String(maxNum + 1).padStart(8, '0')}`;
+}
 
 const assetRepo = new AssetRepository();
 
@@ -28,8 +56,12 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
     if (!body.success) return reply.status(400).send({ error: 'VALIDATION_ERROR', details: body.error.flatten() });
 
     const { purchaseDate, startDate, warrantyExpiry, ...rest } = body.data;
+
+    const serialNo = await generateSerialNo(rest.category);
+
     const asset = await assetRepo.create({
       ...rest,
+      serialNo,
       purchaseDate:   purchaseDate   ? new Date(purchaseDate)   : null,
       startDate:      startDate      ? new Date(startDate)      : null,
       warrantyExpiry: warrantyExpiry ? new Date(warrantyExpiry) : null,
