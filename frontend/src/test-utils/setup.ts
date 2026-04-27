@@ -13,6 +13,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { createI18n } from 'vue-i18n'
 import { vi } from 'vitest'
 import type { Component } from 'vue'
+import zhTW from '@/i18n/zh-TW'
 
 // ── Minimal router (no real routes needed for view-level tests) ─────────────
 export function makeRouter() {
@@ -22,9 +23,9 @@ export function makeRouter() {
   })
 }
 
-// ── Minimal i18n (empty messages — views use $t() but we don't assert on text) ─
+// ── i18n with actual zh-TW translations so text assertions work ───────────────
 export function makeI18n() {
-  return createI18n({ legacy: false, locale: 'zh-TW', messages: { 'zh-TW': {} } })
+  return createI18n({ legacy: false, locale: 'zh-TW', messages: { 'zh-TW': zhTW } })
 }
 
 // ── Stub all Element Plus components so jsdom doesn't need to render them ────
