@@ -20,12 +20,22 @@ const navItems = computed(() => [
 ])
 
 const adminItems = computed(() => [
-  { path: '/assets', label: '資產目錄', icon: Box },
-  { path: '/admin/assets', label: '資產管理', icon: Setting },
-  { path: '/admin/applications', label: '維修審核', icon: Document },
+  { path: '/assets', label: t('nav.assets'), icon: Box },
+  { path: '/admin/assets', label: t('nav.adminAssets'), icon: Setting },
+  { path: '/admin/applications', label: t('nav.adminApplications'), icon: Document },
 ])
 
 const menuItems = computed(() => (auth.isAdmin ? adminItems.value : navItems.value))
+
+const routeTitle = computed(() => {
+  const map: Record<string, string> = {
+    assets: t('nav.assets'),
+    applications: t('nav.myApplications'),
+    'admin-assets': t('nav.adminAssets'),
+    'admin-applications': t('nav.adminReview'),
+  }
+  return map[route.name as string] ?? ''
+})
 
 function isActive(path: string) {
   return route.path === path || route.path.startsWith(path + '/')
@@ -48,12 +58,12 @@ async function handleLogout() {
         </div>
         <span class="brand-name">AssetHub</span>
         <span class="brand-badge" :class="auth.isAdmin ? 'badge-admin' : 'badge-user'">
-          {{ auth.isAdmin ? 'Admin' : 'User' }}
+          {{ auth.isAdmin ? t('auth.roleAdmin') : t('auth.roleUser') }}
         </span>
       </div>
 
       <nav class="sidebar-nav">
-        <div class="nav-section-label">MENU</div>
+        <div class="nav-section-label">{{ t('nav.menu') }}</div>
         <router-link
           v-for="item in menuItems"
           :key="item.path"
@@ -88,9 +98,9 @@ async function handleLogout() {
       <header class="top-bar">
         <div class="top-bar-left">
           <div class="page-breadcrumb">
-            <span class="breadcrumb-root">{{ auth.isAdmin ? t('nav.admin') : 'Portal' }}</span>
+            <span class="breadcrumb-root">{{ auth.isAdmin ? t('nav.admin') : t('nav.portal') }}</span>
             <span class="breadcrumb-sep">/</span>
-            <span class="breadcrumb-current">{{ route.meta?.title as string ?? '' }}</span>
+            <span class="breadcrumb-current">{{ routeTitle }}</span>
           </div>
         </div>
         <div class="top-bar-right">

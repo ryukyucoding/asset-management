@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1 class="page-title">{{ t('nav.applications') }}</h1>
-        <p class="page-sub">追蹤你提交的資產維修申請進度</p>
+        <p class="page-sub">{{ t('application.pageDesc') }}</p>
       </div>
     </div>
 
@@ -29,7 +29,7 @@
             <div class="expand-panel">
               <!-- 申請資訊 -->
               <div class="expand-section">
-                <div class="expand-title">申請資訊</div>
+                <div class="expand-title">{{ t('application.requestInfo') }}</div>
                 <el-descriptions :column="2" border size="small">
                   <el-descriptions-item :label="t('asset.serialNo')">{{ row.asset?.serialNo ?? '—' }}</el-descriptions-item>
                   <el-descriptions-item :label="t('asset.location')">{{ row.asset?.location ?? '—' }}</el-descriptions-item>
@@ -40,28 +40,28 @@
               </div>
               <!-- 故障照片 -->
               <div v-if="row.imageUrls?.length" class="expand-section">
-                <div class="expand-title">故障照片</div>
+                <div class="expand-title">{{ t('application.faultPhotos') }}</div>
                 <div class="photo-grid">
                   <img
                     v-for="(url, idx) in row.imageUrls"
                     :key="url"
                     :src="url"
                     class="fault-photo"
-                    alt="故障照片"
+                    :alt="t('application.faultPhotos')"
                     @click="openViewer(row.imageUrls, idx)"
                   />
                 </div>
               </div>
               <!-- 維修進度（IN_REPAIR / COMPLETED） -->
               <div v-if="row.status === 'IN_REPAIR' || row.status === 'COMPLETED'" class="expand-section">
-                <div class="expand-title">維修進度</div>
+                <div class="expand-title">{{ t('application.repairProgress') }}</div>
                 <el-descriptions :column="2" border size="small">
                   <el-descriptions-item :label="t('application.repairDate')">{{ formatDate(row.repairDate) }}</el-descriptions-item>
-                  <el-descriptions-item :label="t('application.repairVendor')">{{ row.repairVendor ?? '待填寫' }}</el-descriptions-item>
-                  <el-descriptions-item :label="t('application.repairContent')" :span="2">{{ row.repairContent ?? '待填寫' }}</el-descriptions-item>
-                  <el-descriptions-item :label="t('application.repairSolution')" :span="2">{{ row.repairSolution ?? '待填寫' }}</el-descriptions-item>
+                  <el-descriptions-item :label="t('application.repairVendor')">{{ row.repairVendor ?? t('application.pendingText') }}</el-descriptions-item>
+                  <el-descriptions-item :label="t('application.repairContent')" :span="2">{{ row.repairContent ?? t('application.pendingText') }}</el-descriptions-item>
+                  <el-descriptions-item :label="t('application.repairSolution')" :span="2">{{ row.repairSolution ?? t('application.pendingText') }}</el-descriptions-item>
                   <el-descriptions-item :label="t('application.repairCost')">
-                    {{ row.repairCost != null ? `NT$ ${row.repairCost.toLocaleString()}` : '待填寫' }}
+                    {{ row.repairCost != null ? `NT$ ${row.repairCost.toLocaleString()}` : t('application.pendingText') }}
                   </el-descriptions-item>
                 </el-descriptions>
               </div>
@@ -83,7 +83,7 @@
                 v-if="row.imageUrls?.length"
                 type="button"
                 class="photo-pill"
-                :title="`查看 ${row.imageUrls.length} 張故障照片`"
+                :title="t('application.viewPhotos', { count: row.imageUrls.length })"
                 @click.stop="openViewer(row.imageUrls, 0)"
               >
                 <el-icon><Camera /></el-icon>
@@ -103,10 +103,10 @@
             <span :class="row.repairVendor ? '' : 'text-muted'">{{ row.repairVendor ?? '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="申請時間" width="110">
+        <el-table-column :label="t('application.createdAt')" width="110">
           <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right">
+        <el-table-column :label="t('common.actions')" width="80" fixed="right">
           <template #default="{ row }">
             <el-button
               v-if="row.status === 'PENDING'"
@@ -114,13 +114,13 @@
               link
               type="primary"
               @click.stop="openEdit(row)"
-            >修改</el-button>
+            >{{ t('common.modify') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <div class="table-footer">
-        <span class="total-hint">共 {{ total }} 筆</span>
+        <span class="total-hint">{{ t('common.totalCount', { count: total }) }}</span>
         <el-pagination
           v-model:current-page="page"
           v-model:page-size="pageSize"
@@ -146,7 +146,7 @@
   >
     <template #header>
       <div class="viewer-header">
-        <span class="viewer-title">故障照片（{{ viewerIndex + 1 }} / {{ viewerUrls.length }}）</span>
+        <span class="viewer-title">{{ t('application.viewerTitle', { current: viewerIndex + 1, total: viewerUrls.length }) }}</span>
         <el-button :icon="Close" circle plain size="small" @click="viewerVisible = false" />
       </div>
     </template>
@@ -164,7 +164,7 @@
           class="viewer-img"
           :style="{ transform: `scale(${viewerScale}) rotate(${viewerRotate}deg)` }"
           draggable="false"
-          alt="故障照片"
+          :alt="t('application.faultPhotos')"
         />
       </div>
 
@@ -193,7 +193,7 @@
           <div class="viewer-divider" />
           <el-button :icon="Refresh" circle plain size="small" title="重置縮放與旋轉（0）" @click="viewerReset" />
         </div>
-        <el-button type="primary" :icon="Download" @click="downloadCurrentPhoto">下載</el-button>
+        <el-button type="primary" :icon="Download" @click="downloadCurrentPhoto">{{ t('common.download') }}</el-button>
       </div>
     </template>
   </el-dialog>
@@ -201,27 +201,27 @@
   <!-- ─── 編輯申請 Dialog ────────────────────────────────── -->
   <el-dialog
     v-model="editVisible"
-    title="修改申請內容"
+    :title="t('application.editTitle')"
     width="520px"
     align-center
     destroy-on-close
   >
     <el-form :model="editForm" label-position="top" @submit.prevent>
-      <el-form-item label="故障說明">
+      <el-form-item :label="t('application.faultDescription')">
         <el-input
           v-model="editForm.faultDescription"
           type="textarea"
           :rows="4"
-          placeholder="請描述故障情況（至少 5 字）"
+          :placeholder="t('application.faultDescEditPlaceholder')"
         />
       </el-form-item>
-      <el-form-item label="故障照片">
+      <el-form-item :label="t('application.faultPhotos')">
         <ImageUploader v-model="editForm.imageUrls" :max-files="5" />
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="editVisible = false">取消</el-button>
-      <el-button type="primary" :loading="editLoading" @click="submitEdit">儲存</el-button>
+      <el-button @click="editVisible = false">{{ t('common.cancel') }}</el-button>
+      <el-button type="primary" :loading="editLoading" @click="submitEdit">{{ t('common.save') }}</el-button>
     </template>
   </el-dialog>
 </template>
@@ -274,7 +274,7 @@ const statusMap = computed<Record<AppStatus, string>>(() => ({
 const pendingCount = ref(0)
 
 const tabs = computed(() => [
-  { label: '全部',                          value: '' },
+  { label: t('application.all'),            value: '' },
   { label: statusMap.value.PENDING,   value: 'PENDING',   count: pendingCount.value },
   { label: statusMap.value.IN_REPAIR, value: 'IN_REPAIR' },
   { label: statusMap.value.COMPLETED, value: 'COMPLETED' },
@@ -388,7 +388,7 @@ function openEdit(row: Application) {
 
 async function submitEdit() {
   if (editForm.faultDescription.trim().length < 5) {
-    ElMessage.warning('故障說明至少需要 5 個字')
+    ElMessage.warning(t('application.faultDescMin'))
     return
   }
   editLoading.value = true
@@ -397,11 +397,11 @@ async function submitEdit() {
       faultDescription: editForm.faultDescription.trim(),
       imageUrls:        editForm.imageUrls,
     })
-    ElMessage.success('申請已更新')
+    ElMessage.success(t('application.editSuccess'))
     editVisible.value = false
     fetchApplications()
   } catch {
-    ElMessage.error('更新失敗，請稍後再試')
+    ElMessage.error(t('application.editError'))
   } finally {
     editLoading.value = false
   }

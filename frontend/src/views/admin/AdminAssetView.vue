@@ -2,17 +2,17 @@
   <div class="page">
     <div class="page-head">
       <div>
-        <h1 class="page-title">資產管理</h1>
-        <p class="page-sub">新增、編輯與停用資產</p>
+        <h1 class="page-title">{{ t('asset.management') }}</h1>
+        <p class="page-sub">{{ t('asset.managementDesc') }}</p>
       </div>
-      <el-button type="primary" :icon="Plus" @click="openCreateDialog">新增資產</el-button>
+      <el-button type="primary" :icon="Plus" @click="openCreateDialog">{{ t('asset.addAsset') }}</el-button>
     </div>
 
     <!-- Filter bar -->
     <div class="filter-bar">
       <el-input
         v-model="filters.name"
-        placeholder="資產名稱"
+        :placeholder="t('asset.name')"
         clearable
         :prefix-icon="Search"
         class="filter-input"
@@ -20,12 +20,12 @@
       />
       <el-input
         v-model="filters.serialNo"
-        placeholder="序號"
+        :placeholder="t('asset.serialNo')"
         clearable
         @input="debouncedFetch"
       />
-      <el-select v-model="filters.category" placeholder="類別" clearable @change="fetchAssets">
-        <el-option v-for="c in categories" :key="c" :value="c" :label="c" />
+      <el-select v-model="filters.category" :placeholder="t('asset.category')" clearable @change="fetchAssets">
+        <el-option v-for="c in categories" :key="c" :value="c" :label="categoryLabelMap[c]" />
       </el-select>
       <el-select v-model="filters.status" :placeholder="t('asset.status')" clearable @change="fetchAssets">
         <el-option v-for="(label, key) in statusMap" :key="key" :value="key" :label="label" />
@@ -50,13 +50,13 @@
                 <el-descriptions-item :label="t('asset.warrantyExpiry')">
                   <span :class="{ 'warranty-expired': isWarrantyExpired(row.warrantyExpiry) }">
                     {{ formatDate(row.warrantyExpiry) }}
-                    <el-tag v-if="isWarrantyExpired(row.warrantyExpiry)" type="danger" size="small" style="margin-left:4px">已過期</el-tag>
+                    <el-tag v-if="isWarrantyExpired(row.warrantyExpiry)" type="danger" size="small" style="margin-left:4px">{{ t('asset.warrantyExpired') }}</el-tag>
                   </span>
                 </el-descriptions-item>
                 <el-descriptions-item :label="t('asset.description')" :span="3">{{ row.description ?? '—' }}</el-descriptions-item>
               </el-descriptions>
               <div v-if="row.imageUrls && row.imageUrls.length > 0" class="asset-images">
-                <div class="asset-images-label">資產圖片</div>
+                <div class="asset-images-label">{{ t('asset.photos') }}</div>
                 <div class="asset-images-grid">
                   <el-image
                     v-for="url in row.imageUrls"
@@ -87,10 +87,10 @@
         <el-table-column :label="t('asset.assignedDept')" prop="assignedDept" width="110">
           <template #default="{ row }">{{ row.assignedDept ?? '—' }}</template>
         </el-table-column>
-        <el-table-column label="負責人" width="110">
+        <el-table-column :label="t('asset.holder')" width="110">
           <template #default="{ row }">
             <span v-if="row.holderId" class="holder-name">{{ holderMap[row.holderId] ?? '—' }}</span>
-            <span v-else class="text-muted">未指定</span>
+            <span v-else class="text-muted">{{ t('common.unassigned') }}</span>
           </template>
         </el-table-column>
         <el-table-column :label="t('asset.status')" width="130">
@@ -116,7 +116,7 @@
       </el-table>
 
       <div class="table-footer">
-        <span class="total-hint">共 {{ total }} 筆</span>
+        <span class="total-hint">{{ t('common.totalCount', { count: total }) }}</span>
         <el-pagination
           v-model:current-page="page"
           v-model:page-size="pageSize"
@@ -132,12 +132,12 @@
     <!-- Create / Edit dialog -->
     <el-dialog
       v-model="formVisible"
-      :title="editingId ? '編輯資產' : '新增資產'"
+      :title="editingId ? t('asset.editAsset') : t('asset.addAsset')"
       width="680px"
       destroy-on-close
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px" class="dialog-form">
-        <el-divider content-position="left">基本資訊</el-divider>
+        <el-divider content-position="left">{{ t('asset.basicInfo') }}</el-divider>
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item :label="t('asset.name')" prop="name">
@@ -147,7 +147,7 @@
           <el-col :span="12">
             <el-form-item :label="t('asset.category')" prop="category">
               <el-select v-model="form.category" style="width:100%">
-                <el-option v-for="c in categories" :key="c" :value="c" :label="c" />
+                <el-option v-for="c in categories" :key="c" :value="c" :label="categoryLabelMap[c]" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -163,7 +163,7 @@
           </el-col>
         </el-row>
 
-        <el-divider content-position="left">採購資訊</el-divider>
+        <el-divider content-position="left">{{ t('asset.purchaseInfo') }}</el-divider>
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item :label="t('asset.supplier')">
@@ -187,7 +187,7 @@
           </el-col>
         </el-row>
 
-        <el-divider content-position="left">部署資訊</el-divider>
+        <el-divider content-position="left">{{ t('asset.deployInfo') }}</el-divider>
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item :label="t('asset.location')" prop="location">
@@ -200,11 +200,11 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="負責人">
+            <el-form-item :label="t('asset.holder')">
               <el-autocomplete
                 v-model="holderInput"
                 :fetch-suggestions="queryHolders"
-                placeholder="輸入姓名或部門搜尋"
+                :placeholder="t('asset.holderPlaceholder')"
                 clearable
                 style="width:100%"
                 value-key="label"
@@ -238,7 +238,7 @@
           </el-col>
         </el-row>
 
-        <el-divider content-position="left">資產圖片</el-divider>
+        <el-divider content-position="left">{{ t('asset.photos') }}</el-divider>
         <el-form-item label-width="0">
           <ImageUploader v-model="form.imageUrls" :max-files="5" />
         </el-form-item>
@@ -290,7 +290,16 @@ const total    = ref(0)
 const page     = ref(1)
 const pageSize = ref(10)
 const filters  = reactive({ name: '', serialNo: '', category: '', status: '' })
-const categories = ['IT設備', '辦公設備', '實驗器材', '交通工具', 'HIGH_VALUE', '其他']
+const categories = ['IT設備', '辦公設備', '實驗器材', '交通工具', 'HIGH_VALUE', '其他'] as const
+type Category = typeof categories[number]
+const categoryLabelMap = computed<Record<Category, string>>(() => ({
+  'IT設備':   t('asset.categoryMap.IT設備'),
+  '辦公設備': t('asset.categoryMap.辦公設備'),
+  '實驗器材': t('asset.categoryMap.實驗器材'),
+  '交通工具': t('asset.categoryMap.交通工具'),
+  'HIGH_VALUE': t('asset.categoryMap.HIGH_VALUE'),
+  '其他':     t('asset.categoryMap.其他'),
+}))
 const users    = ref<UserSummary[]>([])
 const holderMap = computed<Record<string, string>>(() =>
   Object.fromEntries(users.value.map(u => [u.id, u.name]))
@@ -473,7 +482,7 @@ async function submitForm() {
 }
 
 async function handleDelete(asset: Asset) {
-  await ElMessageBox.confirm(`確認將「${asset.name}」標記為報廢？`, t('common.delete'), { type: 'warning' })
+  await ElMessageBox.confirm(t('asset.confirmDelete', { name: asset.name }), t('common.delete'), { type: 'warning' })
   try {
     await assetApi.remove(asset.id)
     ElMessage.success(t('common.success'))

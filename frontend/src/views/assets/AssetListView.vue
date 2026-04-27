@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1 class="page-title">{{ t('nav.assets') }}</h1>
-        <p class="page-sub">查詢資產狀態，對正常使用中的資產提出維修申請</p>
+        <p class="page-sub">{{ t('asset.pageDesc') }}</p>
       </div>
     </div>
 
@@ -33,7 +33,7 @@
         @input="debouncedFetch"
       />
       <el-select v-model="filters.category" :placeholder="t('asset.category')" clearable @change="fetchAssets">
-        <el-option v-for="c in categories" :key="c" :value="c" :label="c" />
+        <el-option v-for="c in categories" :key="c" :value="c" :label="categoryLabelMap[c]" />
       </el-select>
       <el-select v-model="filters.status" :placeholder="t('asset.status')" clearable @change="fetchAssets">
         <el-option v-for="(label, key) in statusMap" :key="key" :value="key" :label="label" />
@@ -91,14 +91,14 @@
               round
               @click="openRepairDialog(row)"
             >
-              提交維修
+              {{ t('asset.submitRepair') }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <div class="table-footer">
-        <span class="total-hint">共 {{ total }} 筆</span>
+        <span class="total-hint">{{ t('common.totalCount', { count: total }) }}</span>
         <el-pagination
           v-model:current-page="page"
           v-model:page-size="pageSize"
@@ -114,7 +114,7 @@
     <!-- 維修申請 Dialog -->
     <el-dialog
       v-model="repairVisible"
-      :title="`提交維修申請：${selectedAsset?.name ?? ''}`"
+      :title="t('application.submitRepairTitle', { name: selectedAsset?.name ?? '' })"
       width="520px"
       destroy-on-close
     >
@@ -128,10 +128,10 @@
             v-model="repairForm.faultDescription"
             type="textarea"
             :rows="4"
-            placeholder="請詳細描述故障情況、出現時間及影響範圍"
+            :placeholder="t('application.faultDescPlaceholder')"
           />
         </el-form-item>
-        <el-form-item label="故障圖片">
+        <el-form-item :label="t('application.faultPhotos')">
           <ImageUploader v-model="repairForm.imageUrls" :max-files="5" />
         </el-form-item>
       </el-form>
@@ -181,7 +181,16 @@ const total    = ref(0)
 const page     = ref(1)
 const pageSize = ref(10)
 const filters  = reactive({ name: '', serialNo: '', category: '', status: '', location: '' })
-const categories = ['IT設備', '辦公設備', '實驗器材', '交通工具', 'HIGH_VALUE', '其他']
+const categories = ['IT設備', '辦公設備', '實驗器材', '交通工具', 'HIGH_VALUE', '其他'] as const
+type Category = typeof categories[number]
+const categoryLabelMap = computed<Record<Category, string>>(() => ({
+  'IT設備':   t('asset.categoryMap.IT設備'),
+  '辦公設備': t('asset.categoryMap.辦公設備'),
+  '實驗器材': t('asset.categoryMap.實驗器材'),
+  '交通工具': t('asset.categoryMap.交通工具'),
+  'HIGH_VALUE': t('asset.categoryMap.HIGH_VALUE'),
+  '其他':     t('asset.categoryMap.其他'),
+}))
 
 const statusMap = computed<Record<AssetStatus, string>>(() => ({
   AVAILABLE:      t('asset.statusMap.AVAILABLE'),
@@ -191,9 +200,9 @@ const statusMap = computed<Record<AssetStatus, string>>(() => ({
 }))
 
 const stats = computed(() => [
-  { label: '正常使用',   value: availableCount.value, color: '#12b76a' },
-  { label: '申請維修中', value: pendingCount.value,   color: '#2e90fa' },
-  { label: '維修中',     value: inRepairCount.value,  color: '#f79009' },
+  { label: t('asset.statusMap.AVAILABLE'),      value: availableCount.value, color: '#12b76a' },
+  { label: t('asset.statusMap.PENDING_REPAIR'), value: pendingCount.value,   color: '#2e90fa' },
+  { label: t('asset.statusMap.IN_REPAIR'),      value: inRepairCount.value,  color: '#f79009' },
 ])
 
 function formatDate(d: string | null | undefined): string {
@@ -238,9 +247,9 @@ const repairFormRef  = ref<FormInstance>()
 const selectedAsset  = ref<Asset | null>(null)
 const repairForm     = reactive({ faultDescription: '', imageUrls: [] as string[] })
 
-const repairRules: FormRules = {
-  faultDescription: [{ required: true, min: 5, message: '故障描述至少 5 個字', trigger: 'blur' }],
-}
+const repairRules = computed<FormRules>(() => ({
+  faultDescription: [{ required: true, min: 5, message: t('application.faultDescMin'), trigger: 'blur' }],
+}))
 
 function openRepairDialog(asset: Asset) {
   selectedAsset.value = asset
@@ -259,7 +268,7 @@ async function submitRepair() {
       faultDescription: repairForm.faultDescription,
       imageUrls:        repairForm.imageUrls,
     })
-    ElMessage.success('維修申請已提交，等待管理員審核')
+    ElMessage.success(t('application.submitSuccess'))
     repairVisible.value = false
     fetchAssets()
   } catch { ElMessage.error(t('common.error')) }

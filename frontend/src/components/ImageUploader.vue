@@ -12,7 +12,7 @@
           v-if="!readonly"
           type="button"
           class="remove-btn"
-          title="移除"
+          :title="t('uploader.remove')"
           @click="removeUrl(idx)"
         >×</button>
       </div>
@@ -37,7 +37,7 @@
       />
       <el-icon class="upload-icon"><Upload /></el-icon>
       <span class="upload-hint">
-        {{ uploading ? '上傳中…' : `點擊或拖曳圖片（最多 ${maxFiles} 張，每張 ≤ 10MB）` }}
+        {{ uploading ? t('uploader.uploading') : t('uploader.hint', { max: maxFiles }) }}
       </span>
     </label>
 
@@ -52,6 +52,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import { uploadApi } from '@/apis/upload'
@@ -66,6 +67,8 @@ const props = withDefaults(defineProps<Props>(), {
   maxFiles: 5,
   readonly: false,
 })
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', urls: string[]): void
@@ -93,7 +96,7 @@ async function handleFiles(files: FileList | null) {
   const toUpload  = Array.from(files).slice(0, remaining)
 
   if (toUpload.length === 0) {
-    ElMessage.warning(`最多只能上傳 ${props.maxFiles} 張圖片`)
+    ElMessage.warning(t('uploader.limitWarning', { max: props.maxFiles }))
     return
   }
 
@@ -102,7 +105,7 @@ async function handleFiles(files: FileList | null) {
     const res = await uploadApi.uploadImages(toUpload)
     emit('update:modelValue', [...props.modelValue, ...res.data.urls])
   } catch {
-    ElMessage.error('圖片上傳失敗，請重試')
+    ElMessage.error(t('uploader.uploadFailed'))
   } finally {
     uploading.value = false
     if (fileInput.value) fileInput.value.value = ''

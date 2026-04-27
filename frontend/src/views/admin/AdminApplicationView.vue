@@ -2,8 +2,8 @@
   <div class="page">
     <div class="page-head">
       <div>
-        <h1 class="page-title">維修申請管理</h1>
-        <p class="page-sub">審核員工的資產維修申請，並記錄維修進度</p>
+        <h1 class="page-title">{{ t('application.management') }}</h1>
+        <p class="page-sub">{{ t('application.managementDesc') }}</p>
       </div>
     </div>
 
@@ -11,19 +11,19 @@
     <div class="kpi-row">
       <div class="kpi-card kpi-pending">
         <div class="kpi-num">{{ pendingCount }}</div>
-        <div class="kpi-label">待審核</div>
+        <div class="kpi-label">{{ t('application.statusMap.PENDING') }}</div>
       </div>
       <div class="kpi-card kpi-repair">
         <div class="kpi-num">{{ inRepairCount }}</div>
-        <div class="kpi-label">維修中</div>
+        <div class="kpi-label">{{ t('application.statusMap.IN_REPAIR') }}</div>
       </div>
       <div class="kpi-card kpi-completed">
         <div class="kpi-num">{{ completedCount }}</div>
-        <div class="kpi-label">已完成</div>
+        <div class="kpi-label">{{ t('application.statusMap.COMPLETED') }}</div>
       </div>
       <div class="kpi-card kpi-rejected">
         <div class="kpi-num">{{ rejectedCount }}</div>
-        <div class="kpi-label">已拒絕</div>
+        <div class="kpi-label">{{ t('application.statusMap.REJECTED') }}</div>
       </div>
     </div>
 
@@ -43,10 +43,10 @@
             <div class="expand-panel">
               <!-- 申請資訊 -->
               <div class="expand-section">
-                <div class="expand-title">申請資訊</div>
+                <div class="expand-title">{{ t('application.requestInfo') }}</div>
                 <el-descriptions :column="2" border size="small">
-                  <el-descriptions-item label="申請人">{{ row.user?.name ?? '—' }}</el-descriptions-item>
-                  <el-descriptions-item label="部門">{{ row.user?.department ?? '—' }}</el-descriptions-item>
+                  <el-descriptions-item :label="t('application.applicant')">{{ row.user?.name ?? '—' }}</el-descriptions-item>
+                  <el-descriptions-item :label="t('auth.department')">{{ row.user?.department ?? '—' }}</el-descriptions-item>
                   <el-descriptions-item :label="t('asset.serialNo')">{{ row.asset?.serialNo ?? '—' }}</el-descriptions-item>
                   <el-descriptions-item :label="t('asset.category')">{{ row.asset?.category ?? '—' }}</el-descriptions-item>
                   <el-descriptions-item :label="t('application.faultDescription')" :span="2">
@@ -57,8 +57,8 @@
               <!-- 故障照片 -->
               <div v-if="row.imageUrls?.length" class="expand-section">
                 <div class="expand-title">
-                  故障照片
-                  <span class="photo-count-badge">{{ row.imageUrls.length }} 張</span>
+                  {{ t('application.faultPhotos') }}
+                  <span class="photo-count-badge">{{ t('application.photoCount', { count: row.imageUrls.length }) }}</span>
                 </div>
                 <div class="photo-grid">
                   <div
@@ -67,8 +67,8 @@
                     class="photo-item"
                     @click="openViewer(row.imageUrls, idx)"
                   >
-                    <img :src="url" class="fault-photo" alt="故障照片" />
-                    <button class="photo-dl-btn" title="下載此照片" @click.stop="downloadPhoto(url, idx + 1)">
+                    <img :src="url" class="fault-photo" :alt="t('application.faultPhotos')" />
+                    <button class="photo-dl-btn" :title="t('common.download')" @click.stop="downloadPhoto(url, idx + 1)">
                       <el-icon><Download /></el-icon>
                     </button>
                   </div>
@@ -77,7 +77,7 @@
 
               <!-- 維修細節（有資料才顯示） -->
               <div v-if="row.status === 'IN_REPAIR' || row.status === 'COMPLETED'" class="expand-section">
-                <div class="expand-title">維修細節</div>
+                <div class="expand-title">{{ t('application.repairDetails') }}</div>
                 <el-descriptions :column="2" border size="small">
                   <el-descriptions-item :label="t('application.repairDate')">{{ formatDate(row.repairDate) }}</el-descriptions-item>
                   <el-descriptions-item :label="t('application.repairVendor')">{{ row.repairVendor ?? '—' }}</el-descriptions-item>
@@ -92,7 +92,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="申請人" width="110">
+        <el-table-column :label="t('application.applicant')" width="110">
           <template #default="{ row }">
             <div class="applicant-cell">
               <div class="applicant-avatar">{{ row.user?.name?.[0] ?? '?' }}</div>
@@ -113,7 +113,7 @@
                 v-if="row.imageUrls?.length"
                 type="button"
                 class="photo-pill"
-                :title="`查看 ${row.imageUrls.length} 張故障照片`"
+                :title="t('application.viewPhotos', { count: row.imageUrls.length })"
                 @click.stop="openViewer(row.imageUrls, 0)"
               >
                 <el-icon><Camera /></el-icon>{{ row.imageUrls.length }}
@@ -126,27 +126,27 @@
             <StatusBadge :status="row.status" :label="statusMap[row.status as AppStatus]" />
           </template>
         </el-table-column>
-        <el-table-column label="申請時間" width="120">
+        <el-table-column :label="t('application.createdAt')" width="120">
           <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
         </el-table-column>
         <el-table-column width="220" fixed="right">
           <template #default="{ row }">
             <!-- 待審核：核准 / 拒絕 -->
             <template v-if="row.status === 'PENDING'">
-              <el-button size="small" type="success" @click="openReviewDialog(row, 'APPROVED')">核准</el-button>
-              <el-button size="small" type="danger" plain @click="openReviewDialog(row, 'REJECTED')">拒絕</el-button>
+              <el-button size="small" type="success" @click="openReviewDialog(row, 'APPROVED')">{{ t('common.approve') }}</el-button>
+              <el-button size="small" type="danger" plain @click="openReviewDialog(row, 'REJECTED')">{{ t('common.reject') }}</el-button>
             </template>
             <!-- 維修中：填寫細節 + 完成 -->
             <template v-else-if="row.status === 'IN_REPAIR'">
-              <el-button size="small" type="primary" plain @click="openRepairDetailsDialog(row)">填寫細節</el-button>
-              <el-button size="small" type="success" @click="handleComplete(row)">維修完成</el-button>
+              <el-button size="small" type="primary" plain @click="openRepairDetailsDialog(row)">{{ t('application.fillDetails') }}</el-button>
+              <el-button size="small" type="success" @click="handleComplete(row)">{{ t('application.repairComplete') }}</el-button>
             </template>
           </template>
         </el-table-column>
       </el-table>
 
       <div class="table-footer">
-        <span class="total-hint">共 {{ total }} 筆</span>
+        <span class="total-hint">{{ t('common.totalCount', { count: total }) }}</span>
         <el-pagination
           v-model:current-page="page"
           v-model:page-size="pageSize"
@@ -162,13 +162,13 @@
     <!-- 審核 dialog -->
     <el-dialog
       v-model="reviewVisible"
-      :title="reviewAction === 'APPROVED' ? '✓ 核准維修申請' : '✕ 拒絕維修申請'"
+      :title="reviewAction === 'APPROVED' ? t('application.approveTitle') : t('application.rejectTitle')"
       width="440px"
       destroy-on-close
     >
       <el-form :model="reviewForm" label-width="80px" class="dialog-form">
-        <el-form-item label="備註">
-          <el-input v-model="reviewForm.comment" type="textarea" :rows="3" placeholder="選填審核備註" />
+        <el-form-item :label="t('common.remark')">
+          <el-input v-model="reviewForm.comment" type="textarea" :rows="3" :placeholder="t('application.commentPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -184,7 +184,7 @@
     <!-- 填寫維修細節 dialog -->
     <el-dialog
       v-model="repairDetailsVisible"
-      title="填寫維修細節"
+      :title="t('application.repairDetailsTitle')"
       width="520px"
       destroy-on-close
     >
@@ -198,16 +198,16 @@
           />
         </el-form-item>
         <el-form-item :label="t('application.repairVendor')">
-          <el-input v-model="repairForm.repairVendor" placeholder="維修人員或廠商名稱" />
+          <el-input v-model="repairForm.repairVendor" :placeholder="t('application.repairVendorPlaceholder')" />
         </el-form-item>
         <el-form-item :label="t('application.repairCost')">
           <el-input-number v-model="repairForm.repairCost" :min="0" style="width:100%" />
         </el-form-item>
         <el-form-item :label="t('application.repairContent')">
-          <el-input v-model="repairForm.repairContent" type="textarea" :rows="2" placeholder="故障內容說明" />
+          <el-input v-model="repairForm.repairContent" type="textarea" :rows="2" :placeholder="t('application.repairContentPlaceholder')" />
         </el-form-item>
         <el-form-item :label="t('application.repairSolution')">
-          <el-input v-model="repairForm.repairSolution" type="textarea" :rows="2" placeholder="維修方案說明" />
+          <el-input v-model="repairForm.repairSolution" type="textarea" :rows="2" :placeholder="t('application.repairSolutionPlaceholder')" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -229,7 +229,7 @@
         <div class="viewer-header">
           <span class="viewer-counter">
             <el-icon><Camera /></el-icon>
-            故障照片 {{ viewerIndex + 1 }} / {{ viewerUrls.length }}
+            {{ t('application.viewerTitle', { current: viewerIndex + 1, total: viewerUrls.length }) }}
           </span>
           <el-button type="info" plain size="small" circle @click="viewerVisible = false">
             <el-icon><Close /></el-icon>
@@ -252,7 +252,7 @@
             class="viewer-img"
             :style="{ transform: `scale(${viewerScale}) rotate(${viewerRotate}deg)` }"
             draggable="false"
-            alt="故障照片"
+            :alt="t('application.faultPhotos')"
           />
         </div>
         <button
@@ -286,7 +286,7 @@
             <!-- 重置 -->
             <el-button :icon="Refresh" circle plain size="small" title="重置縮放與旋轉（0）" @click="viewerReset" />
           </div>
-          <el-button type="primary" :icon="Download" @click="downloadCurrentPhoto">下載</el-button>
+          <el-button type="primary" :icon="Download" @click="downloadCurrentPhoto">{{ t('common.download') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -503,7 +503,7 @@ async function downloadPhoto(url: string, index: number) {
     a.click()
     URL.revokeObjectURL(a.href)
   } catch {
-    ElMessage.error('下載失敗，請稍後再試')
+    ElMessage.error(t('application.downloadFailed'))
   }
 }
 
@@ -513,10 +513,10 @@ async function downloadCurrentPhoto() {
 
 // ─── 維修完成 ──────────────────────────────────────────────────────────────
 async function handleComplete(row: Application) {
-  await ElMessageBox.confirm('確認此資產維修已完成？資產狀態將恢復為正常使用。', '維修完成確認', { type: 'success' })
+  await ElMessageBox.confirm(t('application.repairCompleteConfirm'), t('application.repairCompleteTitle'), { type: 'success' })
   try {
     await applicationApi.complete(row.id)
-    ElMessage.success('維修完成，資產已恢復正常使用')
+    ElMessage.success(t('application.repairCompleteSuccess'))
     fetchApplications(); fetchKpis()
   } catch { ElMessage.error(t('common.error')) }
 }
