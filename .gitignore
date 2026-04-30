@@ -13,5 +13,4 @@ backend/uploads/*
 !backend/uploads/.gitkeep
 
 gh-vars.env
-/scripts
 docs/deploy-cloudrun.md
