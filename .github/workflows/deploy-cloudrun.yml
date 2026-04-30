@@ -1,0 +1,93 @@
+name: Deploy Cloud Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: ${{ vars.GCP_REGION }}
+  ARTIFACT_REPO: ${{ vars.GCP_ARTIFACT_REPO }}
+  BACKEND_SERVICE: ${{ vars.CLOUD_RUN_BACKEND_SERVICE }}
+  FRONTEND_SERVICE: ${{ vars.CLOUD_RUN_FRONTEND_SERVICE }}
+  DB_INSTANCE_CONNECTION_NAME: ${{ vars.CLOUD_SQL_CONNECTION_NAME }}
+  REDIS_HOST: ${{ vars.REDIS_HOST }}
+  REDIS_PORT: ${{ vars.REDIS_PORT }}
+  CLOUD_RUN_SA: ${{ vars.CLOUD_RUN_SERVICE_ACCOUNT }}
+  GCS_BUCKET_NAME: ${{ vars.GCS_BUCKET_NAME }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+  SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+
+jobs:
+  deploy-backend:
+    name: Deploy backend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auth to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker auth for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Deploy backend
+        run: bash scripts/gcp/deploy-backend-cloudrun.sh
+
+      - name: Read backend URL
+        id: backend-url
+        run: |
+          URL="$(gcloud run services describe "${BACKEND_SERVICE}" --region "${REGION}" --format='value(status.url)')"
+          echo "backend_url=${URL}" >> "${GITHUB_OUTPUT}"
+
+      - name: Smoke test backend
+        env:
+          BACKEND_URL: ${{ steps.backend-url.outputs.backend_url }}
+        run: bash scripts/gcp/smoke-test.sh
+
+  deploy-frontend:
+    name: Deploy frontend
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auth to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker auth for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Resolve backend URL for VITE_API_URL
+        run: |
+          BACKEND_URL="$(gcloud run services describe "${BACKEND_SERVICE}" --region "${REGION}" --format='value(status.url)')"
+          echo "VITE_API_URL=${BACKEND_URL}" >> "${GITHUB_ENV}"
+
+      - name: Deploy frontend
+        run: bash scripts/gcp/deploy-frontend-cloudrun.sh
