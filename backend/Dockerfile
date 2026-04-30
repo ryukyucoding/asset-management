@@ -35,4 +35,4 @@ RUN mkdir -p uploads
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/index.js"]
+CMD ["sh", "-c", "backend_modules/.bin/prisma migrate deploy && node dist/index.js"]
