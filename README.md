@@ -276,102 +276,60 @@ asset-management/
 
 ## 部署（GCP Cloud Run）
 
-### 前置需求
+完整部署手冊請看：[docs/deploy-cloudrun.md](docs/deploy-cloudrun.md)
+
+### 快速起手式（MVP）
 
 ```bash
-# 安裝 gcloud CLI 並登入
+# 0) 安裝並登入 gcloud
 gcloud auth login
 gcloud config set project YOUR_PROJECT_ID
+
+# 1) 設定基礎參數
+export PROJECT_ID="your-project-id"
+export REGION="asia-east1"
+export ARTIFACT_REPO="asset-mgmt"
+export DB_INSTANCE_NAME="asset-mgmt-pg"
+export REDIS_INSTANCE_NAME="asset-mgmt-redis"
+export GCS_BUCKET_NAME="asset-mgmt-prod-assets"
+export CLOUD_RUN_SA="cloud-run-app@${PROJECT_ID}.iam.gserviceaccount.com"
+
+# 2) 一次性建立 GCP 基礎資源（Artifact Registry / Cloud SQL / Redis / GCS / IAM）
+bash scripts/gcp/bootstrap-cloudrun.sh
 ```
-
-### 架構說明
-
-| 角色 | 說明 |
-|------|------|
-| `docker-compose.yml` | **本地開發用** — 只啟動 PostgreSQL + Redis，應用程式跑在本機 |
-| `backend/Dockerfile` | 打包 Backend（Node.js + Prisma）成 container image |
-| `frontend/Dockerfile` | 打包 Frontend（Vue build → Nginx）成 container image |
-
-Cloud Run 的 Zero Downtime 流程：
-```
-git push → CI build image → push 到 Artifact Registry
-→ Cloud Run 啟動新 revision（舊的繼續服務）
-→ /health 回 200 → 流量切到新 revision → 舊的 scale to 0
-```
-
-### 本地測試 Docker image（部署前驗證）
 
 ```bash
-# 注意：兩個 image 都必須從 repo root 建（-f 指定 Dockerfile 路徑，. 為 root context）
-
-# Backend
-docker build -f backend/Dockerfile -t asset-backend .
-docker run -p 3000:3000 \
-  -e DATABASE_URL="postgresql://..." \
-  -e JWT_SECRET="..." \
-  -e STORAGE_DRIVER="local" \
-  asset-backend
-
-# Frontend（VITE_API_URL 在 build 時燒進 JS bundle）
-docker build \
-  -f frontend/Dockerfile \
-  --build-arg VITE_API_URL=http://localhost:3000 \
-  -t asset-frontend .
-docker run -p 8080:80 asset-frontend
+# 3) 部署 backend
+export BACKEND_SERVICE="asset-backend"
+export DB_INSTANCE_CONNECTION_NAME="${PROJECT_ID}:${REGION}:${DB_INSTANCE_NAME}"
+export REDIS_HOST="10.x.x.x"
+export REDIS_PORT="6379"
+export DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:5432/asset_management?schema=public"
+bash scripts/gcp/deploy-backend-cloudrun.sh
 ```
-
-### 部署到 Cloud Run
 
 ```bash
-PROJECT_ID="your-gcp-project-id"
-REGION="asia-east1"
-BACKEND_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/asset-mgmt/backend"
-FRONTEND_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/asset-mgmt/frontend"
-BACKEND_URL="https://asset-backend-xxxx-de.a.run.app"   # 第一次部署後取得
-
-# 1. 建立 Artifact Registry
-gcloud artifacts repositories create asset-mgmt \
-  --repository-format=docker --location=$REGION
-
-# 2. Build & push backend（從 repo root 建）
-docker build -f backend/Dockerfile -t $BACKEND_IMAGE .
-docker push $BACKEND_IMAGE
-
-# 3. Build & push frontend（從 repo root 建，帶入 backend URL）
-docker build \
-  -f frontend/Dockerfile \
-  --build-arg VITE_API_URL=$BACKEND_URL \
-  -t $FRONTEND_IMAGE .
-docker push $FRONTEND_IMAGE
-
-# 4. Deploy backend
-gcloud run deploy asset-backend \
-  --image=$BACKEND_IMAGE \
-  --region=$REGION \
-  --platform=managed \
-  --allow-unauthenticated \
-  --min-instances=1 \
-  --set-env-vars="DATABASE_URL=postgresql://...,JWT_SECRET=...,STORAGE_DRIVER=gcs,GCS_BUCKET_NAME=..."
-
-# 5. Deploy frontend
-gcloud run deploy asset-frontend \
-  --image=$FRONTEND_IMAGE \
-  --region=$REGION \
-  --platform=managed \
-  --allow-unauthenticated \
-  --min-instances=1
+# 4) 部署 frontend
+BACKEND_URL="$(gcloud run services describe asset-backend --region ${REGION} --format='value(status.url)')"
+export FRONTEND_SERVICE="asset-frontend"
+export VITE_API_URL="${BACKEND_URL}"
+bash scripts/gcp/deploy-frontend-cloudrun.sh
 ```
 
-> `--min-instances=1` 可避免冷啟動，確保 Zero Downtime。每次重新部署 Cloud Run 會先啟動新 revision 確認健康後再切流量。
+### CI/CD（GitHub Actions）
+
+- 自動部署 workflow：`.github/workflows/deploy-cloudrun.yml`
+- 觸發條件：`push main` 或手動 `workflow_dispatch`
+- 流程：build/push image -> deploy backend -> smoke test -> deploy frontend
 
 ### Zero Downtime 關鍵設定
 
 | 設定 | 說明 |
 |------|------|
-| `GET /health` | Health check endpoint，DB 連線正常才回 200 |
-| `--min-instances=1` | 至少保留一個 instance，避免 cold start 造成短暫無法服務 |
-| `CMD prisma migrate deploy` | Container 啟動時自動套用 pending migrations（idempotent） |
-| Cloud Run traffic splitting | 部署時舊 revision 繼續跑，新的通過 health check 才切流量 |
+| `GET /health` | Health endpoint，作為 deploy 後 smoke check |
+| `--min-instances=1` | 降低冷啟動風險 |
+| `prisma migrate deploy` | container 啟動時套用 pending migrations |
+| Cloud Run revision | 部署失敗可將流量切回前一版 revision |
 
 ---
 
