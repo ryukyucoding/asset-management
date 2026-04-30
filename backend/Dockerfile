@@ -25,7 +25,7 @@ ENV NODE_ENV=production
 # Copy compiled app and all node_modules (includes Prisma client)
 COPY --from=builder /app/backend/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/backend/node_modules ./backend_modules
+COPY --from=builder /app/backend/node_modules ./backend/node_modules
 
 # Copy Prisma schema for migrate deploy at startup
 COPY backend/prisma ./prisma
@@ -35,4 +35,4 @@ RUN mkdir -p uploads
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "backend_modules/.bin/prisma migrate deploy && node dist/index.js"]
+CMD ["sh", "-c", "backend/node_modules/.bin/prisma migrate deploy && node dist/index.js"]
