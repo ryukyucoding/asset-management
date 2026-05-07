@@ -28,7 +28,7 @@ gcloud run deploy "${FRONTEND_SERVICE}" \
   --platform managed \
   --allow-unauthenticated \
   --min-instances 1 \
-  --max-instances 10
+  --max-instances 10 \
   --port 80
 
 echo "==> Frontend URL"
