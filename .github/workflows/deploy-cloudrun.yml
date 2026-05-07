@@ -59,35 +59,35 @@ jobs:
           BACKEND_URL: ${{ steps.backend-url.outputs.backend_url }}
         run: bash scripts/gcp/smoke-test.sh
 
-  # deploy-frontend:
-  #   name: Deploy frontend
-  #   runs-on: ubuntu-latest
-  #   needs: deploy-backend
-  #   permissions:
-  #     contents: read
-  #     id-token: write
-  #
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #
-  #     - name: Auth to Google Cloud
-  #       uses: google-github-actions/auth@v2
-  #       with:
-  #         workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-  #         service_account: ${{ secrets.GCP_DEPLOYER_SERVICE_ACCOUNT }}
-  #
-  #     - name: Setup gcloud SDK
-  #       uses: google-github-actions/setup-gcloud@v2
-  #       with:
-  #         project_id: ${{ env.PROJECT_ID }}
-  #
-  #     - name: Configure Docker auth for Artifact Registry
-  #       run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
-  #
-  #     - name: Resolve backend URL for VITE_API_URL
-  #       run: |
-  #         BACKEND_URL="$(gcloud run services describe "${BACKEND_SERVICE}" --region "${REGION}" --format='value(status.url)')"
-  #         echo "VITE_API_URL=${BACKEND_URL}" >> "${GITHUB_ENV}"
-  #
-  #     - name: Deploy frontend
-  #       run: bash scripts/gcp/deploy-frontend-cloudrun.sh
+  deploy-frontend:
+    name: Deploy frontend
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Auth to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker auth for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Resolve backend URL for VITE_API_URL
+        run: |
+          BACKEND_URL="$(gcloud run services describe "${BACKEND_SERVICE}" --region "${REGION}" --format='value(status.url)')"
+          echo "VITE_API_URL=${BACKEND_URL}" >> "${GITHUB_ENV}"
+
+      - name: Deploy frontend
+        run: bash scripts/gcp/deploy-frontend-cloudrun.sh
