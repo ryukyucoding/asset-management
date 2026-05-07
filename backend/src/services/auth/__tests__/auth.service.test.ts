@@ -93,6 +93,12 @@ describe('AuthService', () => {
 
       expect(result.email).toBe('test@example.com');
       expect((result as Record<string, unknown>).passwordHash).toBeUndefined();
+      expect(mockRepo.create).toHaveBeenCalledWith({
+        name: 'Test',
+        email: 'test@example.com',
+        department: undefined,
+        passwordHash: expect.any(String),
+      });
     });
 
     it('throws if email already registered', async () => {

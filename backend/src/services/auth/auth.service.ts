@@ -57,7 +57,12 @@ export class AuthService {
     if (existing) throw new Error('Email already registered');
 
     const passwordHash = hashPassword(data.password);
-    const user = await this.userRepo.create({ ...data, passwordHash });
+    const user = await this.userRepo.create({
+      name: data.name,
+      email: data.email,
+      department: data.department,
+      passwordHash,
+    });
     const { passwordHash: _, ...publicUser } = user;
     return publicUser;
   }
