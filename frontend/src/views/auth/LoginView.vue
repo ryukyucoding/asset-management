@@ -275,13 +275,13 @@ async function handleLogin() {
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .form-field {
   display: flex;
   flex-direction: column;
-  margin-bottom: 0 !important;
+  margin-bottom: 8px !important;
 }
 
 .field-label {
@@ -290,6 +290,18 @@ async function handleLogin() {
   color: #374151;
   margin-bottom: 6px;
   display: block;
+}
+
+.form-field :deep(.el-form-item__content) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.form-field :deep(.el-form-item__error) {
+  position: static;
+  margin-top: 6px;
+  line-height: 1.3;
 }
 
 .submit-btn {
