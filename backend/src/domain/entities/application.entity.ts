@@ -1,7 +1,7 @@
 import type { AssetEntity } from './asset.entity';
 import type { UserEntityPublic } from './user.entity';
 
-export type ApplicationStatus = 'PENDING' | 'IN_REPAIR' | 'COMPLETED' | 'REJECTED';
+export type ApplicationStatus = 'PENDING' | 'PENDING_SENIOR_APPROVAL' | 'IN_REPAIR' | 'COMPLETED' | 'REJECTED';
 
 export interface ApplicationEntity {
   id: string;

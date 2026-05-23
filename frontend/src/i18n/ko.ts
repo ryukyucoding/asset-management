@@ -50,6 +50,7 @@ const ko: MessageSchema = {
     emailPlaceholder: '이메일을 입력하세요',
     passwordPlaceholder: '비밀번호를 입력하세요',
     roleAdmin: '관리자',
+    roleSeniorAdmin: '고위 관리자',
     roleUser: '사용자',
   },
   asset: {
@@ -141,6 +142,7 @@ const ko: MessageSchema = {
     photoCount: '{count}장',
     statusMap: {
       PENDING: '검토 중',
+      PENDING_SENIOR_APPROVAL: '고위 승인 대기',
       IN_REPAIR: '수리 중',
       COMPLETED: '수리 완료',
       REJECTED: '반려됨',

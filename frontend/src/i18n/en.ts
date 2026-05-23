@@ -50,6 +50,7 @@ const en: MessageSchema = {
     emailPlaceholder: 'Enter your email',
     passwordPlaceholder: 'Enter your password',
     roleAdmin: 'Admin',
+    roleSeniorAdmin: 'Senior Admin',
     roleUser: 'User',
   },
   asset: {
@@ -143,6 +144,7 @@ const en: MessageSchema = {
     photoCount: '{count}',
     statusMap: {
       PENDING: 'Pending',
+      PENDING_SENIOR_APPROVAL: 'Awaiting Senior Approval',
       IN_REPAIR: 'In Repair',
       COMPLETED: 'Completed',
       REJECTED: 'Rejected',

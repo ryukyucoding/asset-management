@@ -7,7 +7,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: 'USER' | 'ADMIN'
+  role: 'USER' | 'ADMIN' | 'SENIOR_ADMIN'
   department: string | null
 }
 
@@ -17,7 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshToken = ref<string | null>(localStorage.getItem('refreshToken'))
 
   const isLoggedIn = computed(() => !!accessToken.value)
-  const isAdmin = computed(() => user.value?.role === 'ADMIN')
+  const isAdmin = computed(() => user.value?.role === 'ADMIN' || user.value?.role === 'SENIOR_ADMIN')
 
   async function login(email: string, password: string): Promise<void> {
     const res = await authApi.login({ email, password })

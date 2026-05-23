@@ -132,7 +132,7 @@
         <el-table-column width="220" fixed="right">
           <template #default="{ row }">
             <!-- 待審核：核准 / 拒絕 -->
-            <template v-if="row.status === 'PENDING'">
+            <template v-if="row.status === 'PENDING' || row.status === 'PENDING_SENIOR_APPROVAL'">
               <el-button size="small" type="success" @click="openReviewDialog(row, 'APPROVED')">{{ t('common.approve') }}</el-button>
               <el-button size="small" type="danger" plain @click="openReviewDialog(row, 'REJECTED')">{{ t('common.reject') }}</el-button>
             </template>
@@ -301,7 +301,7 @@ import { Camera, Download, Close, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, Refres
 import { applicationApi } from '@/apis/application'
 import StatusBadge from '@/components/StatusBadge.vue'
 
-type AppStatus = 'PENDING' | 'IN_REPAIR' | 'COMPLETED' | 'REJECTED'
+type AppStatus = 'PENDING' | 'PENDING_SENIOR_APPROVAL' | 'IN_REPAIR' | 'COMPLETED' | 'REJECTED'
 
 interface Application {
   id: string
@@ -327,10 +327,11 @@ const pageSize     = ref(10)
 const filters      = reactive({ status: '' })
 
 const statusMap = computed<Record<AppStatus, string>>(() => ({
-  PENDING:   t('application.statusMap.PENDING'),
-  IN_REPAIR: t('application.statusMap.IN_REPAIR'),
-  COMPLETED: t('application.statusMap.COMPLETED'),
-  REJECTED:  t('application.statusMap.REJECTED'),
+  PENDING:                 t('application.statusMap.PENDING'),
+  PENDING_SENIOR_APPROVAL: t('application.statusMap.PENDING_SENIOR_APPROVAL'),
+  IN_REPAIR:               t('application.statusMap.IN_REPAIR'),
+  COMPLETED:               t('application.statusMap.COMPLETED'),
+  REJECTED:                t('application.statusMap.REJECTED'),
 }))
 
 const pendingCount   = ref(0)
@@ -340,13 +341,14 @@ const rejectedCount  = ref(0)
 
 async function fetchKpis() {
   try {
-    const [p, r, c, j] = await Promise.all([
-      applicationApi.list({ status: 'PENDING',   limit: 1 }),
-      applicationApi.list({ status: 'IN_REPAIR', limit: 1 }),
-      applicationApi.list({ status: 'COMPLETED', limit: 1 }),
-      applicationApi.list({ status: 'REJECTED',  limit: 1 }),
+    const [p, psa, r, c, j] = await Promise.all([
+      applicationApi.list({ status: 'PENDING',                 limit: 1 }),
+      applicationApi.list({ status: 'PENDING_SENIOR_APPROVAL', limit: 1 }),
+      applicationApi.list({ status: 'IN_REPAIR',               limit: 1 }),
+      applicationApi.list({ status: 'COMPLETED',               limit: 1 }),
+      applicationApi.list({ status: 'REJECTED',                limit: 1 }),
     ])
-    pendingCount.value   = p.data.total ?? 0
+    pendingCount.value   = (p.data.total ?? 0) + (psa.data.total ?? 0)
     inRepairCount.value  = r.data.total ?? 0
     completedCount.value = c.data.total ?? 0
     rejectedCount.value  = j.data.total ?? 0

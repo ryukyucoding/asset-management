@@ -48,6 +48,7 @@ export default {
     emailPlaceholder: '請輸入電子郵件',
     passwordPlaceholder: '請輸入密碼',
     roleAdmin: '管理員',
+    roleSeniorAdmin: '高階主管',
     roleUser: '使用者',
   },
   asset: {
@@ -139,6 +140,7 @@ export default {
     photoCount: '{count} 張',
     statusMap: {
       PENDING: '待審核',
+      PENDING_SENIOR_APPROVAL: '待高階主管審核',
       IN_REPAIR: '維修中',
       COMPLETED: '維修完成',
       REJECTED: '已拒絕',

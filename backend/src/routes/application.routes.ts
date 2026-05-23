@@ -5,6 +5,7 @@ import { NotificationRepository } from '@infrastructure/repositories/notificatio
 import { prisma } from '@infrastructure/database/prisma.client';
 import { CreateApplicationDTO, ReviewApplicationDTO, RepairDetailsDTO, ApplicationQueryDTO, UpdateApplicationDTO } from '@dtos/application.dto';
 import { authMiddleware, requireRole } from '@middleware/auth.middleware';
+import { resolveApprovalSteps } from '@services/application/approvalRouter.service';
 
 const applicationRepo  = new ApplicationRepository();
 const assetRepo        = new AssetRepository();
@@ -93,48 +94,77 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
     return reply.send(updated);
   });
 
-  // ─── 審核（同意 → 維修中 / 拒絕）────────────────────────────
-  fastify.patch('/applications/:id/approve', { preHandler: [authMiddleware, requireRole('ADMIN')] }, async (request, reply) => {
+  // ─── 審核（支援一般設備單步 / 高價值設備兩步審批）──────────
+  fastify.patch('/applications/:id/approve', { preHandler: [authMiddleware, requireRole('ADMIN', 'SENIOR_ADMIN')] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = ReviewApplicationDTO.safeParse(request.body);
     if (!body.success) return reply.status(400).send({ error: 'VALIDATION_ERROR', details: body.error.flatten() });
 
     const application = await applicationRepo.findById(id);
     if (!application) return reply.status(404).send({ error: 'NOT_FOUND' });
-    if (application.status !== 'PENDING') {
-      return reply.status(409).send({ error: 'CONFLICT', message: 'Application is not pending' });
+
+    const pendingStatuses = ['PENDING', 'PENDING_SENIOR_APPROVAL'] as const;
+    if (!pendingStatuses.includes(application.status as typeof pendingStatuses[number])) {
+      return reply.status(409).send({ error: 'CONFLICT', message: 'Application is not pending review' });
+    }
+
+    // 根據設備類別決定所需審批步驟，再對應目前狀態決定當前步驟
+    const steps = resolveApprovalSteps(application);
+    const currentStepIndex = application.status === 'PENDING' ? 0 : 1;
+    const currentStep = steps[currentStepIndex];
+
+    if (!currentStep) {
+      return reply.status(409).send({ error: 'CONFLICT', message: 'No approval step found for current status' });
+    }
+
+    // 確認操作者的角色符合當前步驟要求
+    if (request.user.role !== currentStep.role) {
+      return reply.status(403).send({ error: 'FORBIDDEN', message: `Step ${currentStep.step} requires role ${currentStep.role}` });
     }
 
     await prisma.approval.create({
       data: {
         applicationId: id,
         approverId:    request.user.userId,
-        step:          1,
+        step:          currentStep.step,
         action:        body.data.action,
         comment:       body.data.comment,
       },
     });
 
-    const newStatus = body.data.action === 'APPROVED' ? 'IN_REPAIR' : 'REJECTED';
-    const updated = await applicationRepo.update(id, { status: newStatus });
+    const assetName = application.asset?.name ?? '資產';
 
-    // 審核通過 → 資產改為維修中；審核拒絕 → 資產恢復正常使用
-    if (newStatus === 'IN_REPAIR') {
-      await assetRepo.update(application.assetId, { status: 'IN_REPAIR' });
-    } else {
+    if (body.data.action === 'REJECTED') {
+      await applicationRepo.update(id, { status: 'REJECTED' });
       await assetRepo.update(application.assetId, { status: 'AVAILABLE' });
+      await notificationRepo.create({
+        userId:  application.userId,
+        type:    'APPLICATION_REJECTED',
+        message: `你的「${assetName}」維修申請已被拒絕${body.data.comment ? `：${body.data.comment}` : ''}`,
+      });
+    } else if (currentStepIndex + 1 < steps.length) {
+      // 尚有下一關：進入「待高階主管審核」
+      await applicationRepo.update(id, { status: 'PENDING_SENIOR_APPROVAL' });
+      const seniorAdmins = await prisma.user.findMany({ where: { role: 'SENIOR_ADMIN' }, select: { id: true } });
+      await Promise.all(seniorAdmins.map(sa =>
+        notificationRepo.create({
+          userId:  sa.id,
+          type:    'APPLICATION_PENDING_SENIOR_APPROVAL',
+          message: `「${assetName}」維修申請需要您的最終審核`,
+        })
+      ));
+    } else {
+      // 全部審核通過 → 進入維修中
+      await applicationRepo.update(id, { status: 'IN_REPAIR' });
+      await assetRepo.update(application.assetId, { status: 'IN_REPAIR' });
+      await notificationRepo.create({
+        userId:  application.userId,
+        type:    'APPLICATION_APPROVED',
+        message: `你的「${assetName}」維修申請已通過審核，進入維修中`,
+      });
     }
 
-    // 通知申請人審核結果
-    const reviewedAsset = await assetRepo.findById(application.assetId);
-    await notificationRepo.create({
-      userId:  application.userId,
-      type:    newStatus === 'IN_REPAIR' ? 'APPLICATION_APPROVED' : 'APPLICATION_REJECTED',
-      message: newStatus === 'IN_REPAIR'
-        ? `你的「${reviewedAsset?.name ?? '資產'}」維修申請已通過審核，進入維修中`
-        : `你的「${reviewedAsset?.name ?? '資產'}」維修申請已被拒絕${body.data.comment ? `：${body.data.comment}` : ''}`,
-    });
-
+    const updated = await applicationRepo.findById(id);
     return reply.send(updated);
   });
 
