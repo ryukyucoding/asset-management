@@ -80,7 +80,7 @@
         <el-table-column :label="t('asset.serialNo')" prop="serialNo" width="130" />
         <el-table-column :label="t('asset.category')" width="110">
           <template #default="{ row }">
-            <span class="category-tag">{{ row.category }}</span>
+            <span class="category-tag">{{ categoryLabel(row.category) }}</span>
           </template>
         </el-table-column>
         <el-table-column :label="t('asset.location')" prop="location" width="120" />
@@ -261,6 +261,7 @@ import { userApi, type UserSummary } from '@/apis/user'
 import StatusBadge from '@/components/StatusBadge.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 import { resolveMediaUrl, resolveMediaUrls } from '@/utils/mediaUrl'
+import { useAssetCategory } from '@/composable/useAssetCategory'
 
 type AssetStatus = 'AVAILABLE' | 'PENDING_REPAIR' | 'IN_REPAIR' | 'RETIRED'
 
@@ -291,16 +292,7 @@ const total    = ref(0)
 const page     = ref(1)
 const pageSize = ref(10)
 const filters  = reactive({ name: '', serialNo: '', category: '', status: '' })
-const categories = ['IT設備', '辦公設備', '實驗器材', '交通工具', 'HIGH_VALUE', '其他'] as const
-type Category = typeof categories[number]
-const categoryLabelMap = computed<Record<Category, string>>(() => ({
-  'IT設備':   t('asset.categoryMap.IT設備'),
-  '辦公設備': t('asset.categoryMap.辦公設備'),
-  '實驗器材': t('asset.categoryMap.實驗器材'),
-  '交通工具': t('asset.categoryMap.交通工具'),
-  'HIGH_VALUE': t('asset.categoryMap.HIGH_VALUE'),
-  '其他':     t('asset.categoryMap.其他'),
-}))
+const { categories, categoryLabelMap, categoryLabel } = useAssetCategory()
 const users    = ref<UserSummary[]>([])
 const holderMap = computed<Record<string, string>>(() =>
   Object.fromEntries(users.value.map(u => [u.id, u.name]))

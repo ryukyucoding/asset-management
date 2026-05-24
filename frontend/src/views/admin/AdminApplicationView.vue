@@ -48,7 +48,7 @@
                   <el-descriptions-item :label="t('application.applicant')">{{ row.user?.name ?? '—' }}</el-descriptions-item>
                   <el-descriptions-item :label="t('auth.department')">{{ row.user?.department ?? '—' }}</el-descriptions-item>
                   <el-descriptions-item :label="t('asset.serialNo')">{{ row.asset?.serialNo ?? '—' }}</el-descriptions-item>
-                  <el-descriptions-item :label="t('asset.category')">{{ row.asset?.category ?? '—' }}</el-descriptions-item>
+                  <el-descriptions-item :label="t('asset.category')">{{ categoryLabel(row.asset?.category) }}</el-descriptions-item>
                   <el-descriptions-item :label="t('application.faultDescription')" :span="2">
                     <span class="fault-desc">{{ row.faultDescription }}</span>
                   </el-descriptions-item>
@@ -301,6 +301,7 @@ import { Camera, Download, Close, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, Refres
 import { applicationApi } from '@/apis/application'
 import StatusBadge from '@/components/StatusBadge.vue'
 import { resolveMediaUrl, resolveMediaUrls } from '@/utils/mediaUrl'
+import { useAssetCategory } from '@/composable/useAssetCategory'
 
 type AppStatus = 'PENDING' | 'PENDING_SENIOR_APPROVAL' | 'IN_REPAIR' | 'COMPLETED' | 'REJECTED'
 
@@ -320,6 +321,7 @@ interface Application {
 }
 
 const { t } = useI18n()
+const { categoryLabel } = useAssetCategory()
 const loading      = ref(false)
 const applications = ref<Application[]>([])
 const total        = ref(0)

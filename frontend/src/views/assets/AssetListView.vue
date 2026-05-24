@@ -73,7 +73,7 @@
         <el-table-column :label="t('asset.serialNo')" prop="serialNo" width="140" />
         <el-table-column :label="t('asset.category')" prop="category" width="110">
           <template #default="{ row }">
-            <span class="category-tag">{{ row.category }}</span>
+            <span class="category-tag">{{ categoryLabel(row.category) }}</span>
           </template>
         </el-table-column>
         <el-table-column :label="t('asset.location')" prop="location" width="130" />
@@ -152,6 +152,7 @@ import { assetApi } from '@/apis/asset'
 import { applicationApi } from '@/apis/application'
 import StatusBadge from '@/components/StatusBadge.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
+import { useAssetCategory } from '@/composable/useAssetCategory'
 
 const pendingCount      = ref(0)
 const availableCount    = ref(0)
@@ -181,16 +182,7 @@ const total    = ref(0)
 const page     = ref(1)
 const pageSize = ref(10)
 const filters  = reactive({ name: '', serialNo: '', category: '', status: '', location: '' })
-const categories = ['IT設備', '辦公設備', '實驗器材', '交通工具', 'HIGH_VALUE', '其他'] as const
-type Category = typeof categories[number]
-const categoryLabelMap = computed<Record<Category, string>>(() => ({
-  'IT設備':   t('asset.categoryMap.IT設備'),
-  '辦公設備': t('asset.categoryMap.辦公設備'),
-  '實驗器材': t('asset.categoryMap.實驗器材'),
-  '交通工具': t('asset.categoryMap.交通工具'),
-  'HIGH_VALUE': t('asset.categoryMap.HIGH_VALUE'),
-  '其他':     t('asset.categoryMap.其他'),
-}))
+const { categories, categoryLabelMap, categoryLabel } = useAssetCategory()
 
 const statusMap = computed<Record<AssetStatus, string>>(() => ({
   AVAILABLE:      t('asset.statusMap.AVAILABLE'),
