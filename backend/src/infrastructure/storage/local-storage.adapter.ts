@@ -1,4 +1,5 @@
 import { createWriteStream, mkdirSync, unlink } from 'fs';
+import { pipeline } from 'stream/promises';
 import { join, extname } from 'path';
 import { randomUUID } from 'crypto';
 import type { MultipartFile } from '@fastify/multipart';
@@ -13,10 +14,6 @@ export const UPLOAD_DIR = join(process.cwd(), 'uploads');
 mkdirSync(UPLOAD_DIR, { recursive: true });
 
 export class LocalStorageAdapter implements IStorageAdapter {
-  private get baseUrl(): string {
-    return (process.env.BASE_URL ?? 'http://localhost:3000').replace(/\/$/, '');
-  }
-
   async save(part: MultipartFile): Promise<UploadResult> {
     if (!ALLOWED_TYPES.has(part.mimetype)) {
       throw new Error(`Unsupported type: ${part.mimetype}. Allowed: jpeg, png, gif, webp`);
@@ -28,25 +25,22 @@ export class LocalStorageAdapter implements IStorageAdapter {
 
     let bytesWritten = 0;
     const dest = createWriteStream(filePath);
-
-    for await (const chunk of part.file) {
-      bytesWritten += (chunk as Buffer).length;
-      if (bytesWritten > MAX_SIZE_BYTES) {
-        dest.destroy();
-        throw new Error(`File exceeds ${MAX_SIZE_BYTES / 1024 / 1024}MB limit`);
+    const limitStream = async function* (source: AsyncIterable<Buffer>) {
+      for await (const chunk of source) {
+        bytesWritten += chunk.length;
+        if (bytesWritten > MAX_SIZE_BYTES) {
+          throw new Error(`File exceeds ${MAX_SIZE_BYTES / 1024 / 1024}MB limit`);
+        }
+        yield chunk;
       }
-      dest.write(chunk);
-    }
+    };
 
-    await new Promise<void>((resolve, reject) => {
-      dest.end();
-      dest.on('finish', resolve);
-      dest.on('error', reject);
-    });
+    await pipeline(limitStream(part.file), dest);
 
+    // Relative path — frontend resolves via VITE_API_URL (avoids wrong BASE_URL in dev/deploy)
     return {
       filename,
-      url: `${this.baseUrl}/uploads/${filename}`,
+      url: `/uploads/${filename}`,
     };
   }
 

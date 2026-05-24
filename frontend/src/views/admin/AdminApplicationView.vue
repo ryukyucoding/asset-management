@@ -67,7 +67,7 @@
                     class="photo-item"
                     @click="openViewer(row.imageUrls, idx)"
                   >
-                    <img :src="url" class="fault-photo" :alt="t('application.faultPhotos')" />
+                    <img :src="resolveMediaUrl(url)" class="fault-photo" :alt="t('application.faultPhotos')" />
                     <button class="photo-dl-btn" :title="t('common.download')" @click.stop="downloadPhoto(url, idx + 1)">
                       <el-icon><Download /></el-icon>
                     </button>
@@ -300,6 +300,7 @@ import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { Camera, Download, Close, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, RefreshLeft, RefreshRight, Refresh } from '@element-plus/icons-vue'
 import { applicationApi } from '@/apis/application'
 import StatusBadge from '@/components/StatusBadge.vue'
+import { resolveMediaUrl, resolveMediaUrls } from '@/utils/mediaUrl'
 
 type AppStatus = 'PENDING' | 'PENDING_SENIOR_APPROVAL' | 'IN_REPAIR' | 'COMPLETED' | 'REJECTED'
 
@@ -452,7 +453,7 @@ const viewerCurrentUrl = computed(() => viewerUrls.value[viewerIndex.value] ?? '
 
 function openViewer(urls: string[], index = 0) {
   if (!urls.length) return
-  viewerUrls.value    = urls
+  viewerUrls.value    = resolveMediaUrls(urls)
   viewerIndex.value   = index
   viewerScale.value   = 1
   viewerRotate.value  = 0
@@ -496,7 +497,7 @@ watch(viewerVisible, (v) => {
 
 async function downloadPhoto(url: string, index: number) {
   try {
-    const res  = await fetch(url)
+    const res  = await fetch(resolveMediaUrl(url))
     const blob = await res.blob()
     const ext  = blob.type.split('/')[1] ?? 'jpg'
     const a    = document.createElement('a')

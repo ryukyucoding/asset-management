@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mediaUrlArraySchema } from './media-url.schema';
 
 export const CreateAssetDTO = z.object({
   name:          z.string().min(1),
@@ -14,7 +15,7 @@ export const CreateAssetDTO = z.object({
   warrantyExpiry: z.string().datetime().optional(),
   holderId:      z.string().cuid().optional(),
   description:   z.string().optional(),
-  imageUrls:     z.array(z.string().url()).optional(),
+  imageUrls:     mediaUrlArraySchema.optional(),
 });
 
 export const UpdateAssetDTO = z.object({
@@ -32,7 +33,7 @@ export const UpdateAssetDTO = z.object({
   holderId:      z.string().cuid().nullable().optional(),
   status:        z.enum(['AVAILABLE', 'PENDING_REPAIR', 'IN_REPAIR', 'RETIRED']).optional(),
   description:   z.string().optional(),
-  imageUrls:     z.array(z.string().url()).optional(),
+  imageUrls:     mediaUrlArraySchema.optional(),
 });
 
 export const AssetQueryDTO = z.object({

@@ -7,7 +7,7 @@
         :key="url"
         class="preview-item"
       >
-        <img :src="url" alt="uploaded image" class="preview-img" @click="openPreview(url)" />
+        <img :src="resolveMediaUrl(url)" alt="uploaded image" class="preview-img" @click="openPreview(url)" />
         <button
           v-if="!readonly"
           type="button"
@@ -44,7 +44,7 @@
     <!-- Full-screen preview -->
     <el-image-viewer
       v-if="previewUrl"
-      :url-list="[previewUrl]"
+      :url-list="[resolveMediaUrl(previewUrl)]"
       @close="previewUrl = ''"
     />
   </div>
@@ -56,6 +56,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import { uploadApi } from '@/apis/upload'
+import { resolveMediaUrl } from '@/utils/mediaUrl'
 
 interface Props {
   modelValue: string[]

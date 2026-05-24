@@ -61,8 +61,8 @@
                   <el-image
                     v-for="url in row.imageUrls"
                     :key="url"
-                    :src="url"
-                    :preview-src-list="row.imageUrls"
+                    :src="resolveMediaUrl(url)"
+                    :preview-src-list="resolveMediaUrls(row.imageUrls)"
                     fit="cover"
                     class="asset-thumb"
                   />
@@ -260,6 +260,7 @@ import { assetApi } from '@/apis/asset'
 import { userApi, type UserSummary } from '@/apis/user'
 import StatusBadge from '@/components/StatusBadge.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
+import { resolveMediaUrl, resolveMediaUrls } from '@/utils/mediaUrl'
 
 type AssetStatus = 'AVAILABLE' | 'PENDING_REPAIR' | 'IN_REPAIR' | 'RETIRED'
 

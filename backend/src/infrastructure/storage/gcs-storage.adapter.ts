@@ -59,12 +59,18 @@ export class GCSStorageAdapter implements IStorageAdapter {
     }
 
     await new Promise<void>((resolve, reject) => {
-      writeStream.end();
       writeStream.on('finish', resolve);
       writeStream.on('error', reject);
+      writeStream.end();
     });
 
-    // Public URL (bucket must have "allUsers" viewer IAM or use uniform bucket-level access)
+    // Best-effort public ACL (ignored when bucket uses uniform bucket-level access + IAM)
+    try {
+      await file.makePublic();
+    } catch {
+      // Bucket may rely on allUsers objectViewer IAM instead
+    }
+
     const url = `https://storage.googleapis.com/${this.bucketName}/${gcsPath}`;
 
     return { filename, url };

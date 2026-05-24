@@ -45,7 +45,7 @@
                   <img
                     v-for="(url, idx) in row.imageUrls"
                     :key="url"
-                    :src="url"
+                    :src="resolveMediaUrl(url)"
                     class="fault-photo"
                     :alt="t('application.faultPhotos')"
                     @click="openViewer(row.imageUrls, idx)"
@@ -239,6 +239,7 @@ import {
 import { applicationApi } from '@/apis/application'
 import StatusBadge from '@/components/StatusBadge.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
+import { resolveMediaUrl, resolveMediaUrls } from '@/utils/mediaUrl'
 
 type AppStatus = 'PENDING' | 'IN_REPAIR' | 'COMPLETED' | 'REJECTED'
 
@@ -321,7 +322,7 @@ const viewerRotate  = ref(0)
 const viewerCurrentUrl = computed(() => viewerUrls.value[viewerIndex.value] ?? '')
 
 function openViewer(urls: string[], index = 0) {
-  viewerUrls.value   = urls
+  viewerUrls.value   = resolveMediaUrls(urls)
   viewerIndex.value  = index
   viewerScale.value  = 1
   viewerRotate.value = 0

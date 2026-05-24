@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { mediaUrlArraySchema } from './media-url.schema';
 
 export const CreateApplicationDTO = z.object({
   assetId:          z.string().cuid(),
   faultDescription: z.string().min(5, 'faultDescription is required and must be at least 5 characters'),
-  imageUrls:        z.array(z.string().url()).optional().default([]),
+  imageUrls:        mediaUrlArraySchema.optional().default([]),
 });
 
 export const ReviewApplicationDTO = z.object({
