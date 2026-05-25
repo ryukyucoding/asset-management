@@ -1,9 +1,12 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { verifyAccessToken } from '@services/auth/auth.service';
+import type { UserRole } from '@domain/entities/user.entity';
+import { ERROR_CODES, HTTP_STATUS } from '@constants/error.constants';
+import { sendApiError } from '@domain/errors/error-response';
 
 export interface JwtPayload {
   userId: string;
-  role: string;
+  role: UserRole;
 }
 
 declare module 'fastify' {
@@ -15,7 +18,7 @@ declare module 'fastify' {
 export async function authMiddleware(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const authHeader = request.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
-    reply.status(401).send({ error: 'UNAUTHORIZED', message: 'Missing or invalid token' });
+    sendApiError(reply, ERROR_CODES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED, 'Missing or invalid token');
     return;
   }
 
@@ -23,14 +26,14 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
     const token = authHeader.slice(7);
     request.user = verifyAccessToken(token);
   } catch {
-    reply.status(401).send({ error: 'UNAUTHORIZED', message: 'Invalid or expired token' });
+    sendApiError(reply, ERROR_CODES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED, 'Invalid or expired token');
   }
 }
 
 export function requireRole(...roles: string[]) {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     if (!roles.includes(request.user?.role)) {
-      reply.status(403).send({ error: 'FORBIDDEN', message: 'Insufficient permissions' });
+      sendApiError(reply, ERROR_CODES.FORBIDDEN, HTTP_STATUS.FORBIDDEN, 'Insufficient permissions');
     }
   };
 }

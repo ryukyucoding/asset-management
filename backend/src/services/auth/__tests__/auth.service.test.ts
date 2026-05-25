@@ -17,6 +17,7 @@ const mockUser: UserEntity = {
 const mockRepo: IUserRepository = {
   findById: vi.fn(),
   findByEmail: vi.fn(),
+  findIdsByRole: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
 };

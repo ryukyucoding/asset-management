@@ -3,6 +3,8 @@ import { AssetRepository } from '@infrastructure/repositories/asset.repository';
 import { CreateAssetDTO, UpdateAssetDTO, AssetQueryDTO } from '@dtos/asset.dto';
 import { authMiddleware, requireRole } from '@middleware/auth.middleware';
 import { prisma } from '@infrastructure/database/prisma.client';
+import { ERROR_CODES, HTTP_STATUS } from '@constants/error.constants';
+import { sendApiError } from '@domain/errors/error-response';
 
 const CATEGORY_PREFIX: Record<string, string> = {
   'IT設備':   'IT',
@@ -36,7 +38,15 @@ const assetRepo = new AssetRepository();
 export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/assets', { preHandler: [authMiddleware] }, async (request, reply) => {
     const query = AssetQueryDTO.safeParse(request.query);
-    if (!query.success) return reply.status(400).send({ error: 'VALIDATION_ERROR', details: query.error.flatten() });
+    if (!query.success) {
+      return sendApiError(
+        reply,
+        ERROR_CODES.VALIDATION_ERROR,
+        HTTP_STATUS.BAD_REQUEST,
+        'Invalid query parameters',
+        query.error.flatten(),
+      );
+    }
 
     // 一般用戶只能看自己負責的資產
     const holderId = request.user.role === 'USER' ? request.user.userId : query.data.holderId;
@@ -47,13 +57,23 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/assets/:id', { preHandler: [authMiddleware] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const asset = await assetRepo.findById(id);
-    if (!asset) return reply.status(404).send({ error: 'NOT_FOUND' });
+    if (!asset) {
+      return sendApiError(reply, ERROR_CODES.NOT_FOUND, HTTP_STATUS.NOT_FOUND, 'Asset not found');
+    }
     return reply.send(asset);
   });
 
   fastify.post('/assets', { preHandler: [authMiddleware, requireRole('ADMIN')] }, async (request, reply) => {
     const body = CreateAssetDTO.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: 'VALIDATION_ERROR', details: body.error.flatten() });
+    if (!body.success) {
+      return sendApiError(
+        reply,
+        ERROR_CODES.VALIDATION_ERROR,
+        HTTP_STATUS.BAD_REQUEST,
+        'Invalid request body',
+        body.error.flatten(),
+      );
+    }
 
     const { purchaseDate, startDate, warrantyExpiry, ...rest } = body.data;
 
@@ -81,10 +101,20 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.patch('/assets/:id', { preHandler: [authMiddleware, requireRole('ADMIN')] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = UpdateAssetDTO.safeParse(request.body);
-    if (!body.success) return reply.status(400).send({ error: 'VALIDATION_ERROR', details: body.error.flatten() });
+    if (!body.success) {
+      return sendApiError(
+        reply,
+        ERROR_CODES.VALIDATION_ERROR,
+        HTTP_STATUS.BAD_REQUEST,
+        'Invalid request body',
+        body.error.flatten(),
+      );
+    }
 
     const existing = await assetRepo.findById(id);
-    if (!existing) return reply.status(404).send({ error: 'NOT_FOUND' });
+    if (!existing) {
+      return sendApiError(reply, ERROR_CODES.NOT_FOUND, HTTP_STATUS.NOT_FOUND, 'Asset not found');
+    }
 
     const { purchaseDate, startDate, warrantyExpiry, ...rest } = body.data;
     const updated = await assetRepo.update(id, {
@@ -99,7 +129,9 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.delete('/assets/:id', { preHandler: [authMiddleware, requireRole('ADMIN')] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const existing = await assetRepo.findById(id);
-    if (!existing) return reply.status(404).send({ error: 'NOT_FOUND' });
+    if (!existing) {
+      return sendApiError(reply, ERROR_CODES.NOT_FOUND, HTTP_STATUS.NOT_FOUND, 'Asset not found');
+    }
 
     await assetRepo.delete(id);
     return reply.status(204).send();

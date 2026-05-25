@@ -24,7 +24,7 @@ async function main(): Promise<void> {
   });
 
   // Regular user
-  await prisma.user.upsert({
+  const testUser = await prisma.user.upsert({
     where: { email: 'user@example.com' },
     update: {},
     create: {
@@ -109,13 +109,20 @@ async function main(): Promise<void> {
       });
       await prisma.asset.update({
         where: { id: existing.id },
-        data:  { serialNo: asset.serialNo },
+        data:  {
+          serialNo: asset.serialNo,
+          ...(asset.serialNo === 'OFC-00000002' ? { holderId: testUser.id, status: 'AVAILABLE' as const } : {}),
+        },
       });
     } else {
       // Delete any asset occupying the target serialNo before creating
       await prisma.asset.deleteMany({ where: { serialNo: asset.serialNo } });
       await prisma.asset.create({
-        data: { ...asset, status: 'AVAILABLE', holderId: null },
+        data: {
+          ...asset,
+          status: 'AVAILABLE',
+          holderId: asset.serialNo === 'OFC-00000002' ? testUser.id : null,
+        },
       });
     }
   }

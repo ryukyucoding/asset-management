@@ -1,6 +1,6 @@
 import { prisma } from '@infrastructure/database/prisma.client';
 import type { IUserRepository } from '@domain/repositories/user.repository.interface';
-import type { UserEntity } from '@domain/entities/user.entity';
+import type { UserEntity, UserRole } from '@domain/entities/user.entity';
 
 export class UserRepository implements IUserRepository {
   async findById(id: string): Promise<UserEntity | null> {
@@ -9,6 +9,11 @@ export class UserRepository implements IUserRepository {
 
   async findByEmail(email: string): Promise<UserEntity | null> {
     return prisma.user.findUnique({ where: { email } });
+  }
+
+  async findIdsByRole(role: UserRole): Promise<string[]> {
+    const users = await prisma.user.findMany({ where: { role }, select: { id: true } });
+    return users.map((u) => u.id);
   }
 
   async create(data: { name: string; email: string; passwordHash: string; department?: string }): Promise<UserEntity> {

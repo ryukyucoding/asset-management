@@ -8,6 +8,9 @@
     "dev:frontend": "pnpm --filter frontend dev",
     "build": "pnpm --filter backend build && pnpm --filter frontend build",
     "test": "pnpm --filter backend test && pnpm --filter frontend test:unit",
+    "test:coverage": "pnpm --filter backend test:coverage",
+    "test:integration": "pnpm --filter backend test:integration",
+    "test:e2e": "pnpm --filter frontend test:e2e",
     "db:migrate": "pnpm --filter backend db:migrate",
     "db:seed": "pnpm --filter backend db:seed"
   },

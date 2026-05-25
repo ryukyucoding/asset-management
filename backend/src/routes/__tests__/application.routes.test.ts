@@ -2,95 +2,29 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { signAccessToken } from '@services/auth/auth.service';
 import type { ApplicationEntity } from '@domain/entities/application.entity';
-import type { AssetEntity } from '@domain/entities/asset.entity';
+import { AppError } from '@domain/errors/app.errors';
 
-// ─── Hoist mock functions ──────────────────────────────────────────────────
-const appMocks = vi.hoisted(() => ({
-  findAll:  vi.fn(),
-  findById: vi.fn(),
-  create:   vi.fn(),
-  update:   vi.fn(),
+const serviceMocks = vi.hoisted(() => ({
+  list:               vi.fn(),
+  getById:            vi.fn(),
+  submit:             vi.fn(),
+  update:             vi.fn(),
+  approve:            vi.fn(),
+  updateRepairDetails: vi.fn(),
+  complete:           vi.fn(),
 }));
 
-const assetMocks = vi.hoisted(() => ({
-  findById: vi.fn(),
-  update:   vi.fn(),
-}));
-
-const prismaMocks = vi.hoisted(() => ({
-  approvalCreate: vi.fn(),
-  userFindMany:   vi.fn().mockResolvedValue([]),  // no admins by default
-}));
-
-const notifMocks = vi.hoisted(() => ({
-  create: vi.fn().mockResolvedValue({}),
-}));
-
-vi.mock('@infrastructure/repositories/notification.repository', () => ({
-  NotificationRepository: vi.fn().mockImplementation(() => ({
-    create:       notifMocks.create,
-    findByUserId: vi.fn(),
-    markAsRead:   vi.fn(),
-    markAllAsRead: vi.fn(),
-  })),
-}));
-
-vi.mock('@infrastructure/repositories/application.repository', () => ({
-  ApplicationRepository: vi.fn().mockImplementation(() => ({
-    findAll:  appMocks.findAll,
-    findById: appMocks.findById,
-    create:   appMocks.create,
-    update:   appMocks.update,
-  })),
-}));
-
-vi.mock('@infrastructure/repositories/asset.repository', () => ({
-  AssetRepository: vi.fn().mockImplementation(() => ({
-    findAll:  vi.fn(),
-    findById: assetMocks.findById,
-    create:   vi.fn(),
-    update:   assetMocks.update,
-    delete:   vi.fn(),
-  })),
-}));
-
-vi.mock('@infrastructure/database/prisma.client', () => ({
-  prisma: {
-    approval: {
-      create: prismaMocks.approvalCreate,
-    },
-    user: {
-      findMany: prismaMocks.userFindMany,
-    },
-  },
+vi.mock('@services/application/application.service', () => ({
+  ApplicationService: vi.fn().mockImplementation(() => serviceMocks),
 }));
 
 import { applicationRoutes } from '../application.routes';
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
-// Valid CUID v1 format (required by CreateApplicationDTO.assetId)
 const ASSET_ID = 'cltest00000000000000000001';
 const APP_ID   = 'cltest00000000000000000002';
 
 const userToken  = signAccessToken({ userId: 'user-1', role: 'USER' });
 const adminToken = signAccessToken({ userId: 'admin-1', role: 'ADMIN' });
-
-function makeAsset(overrides: Partial<AssetEntity> = {}): AssetEntity {
-  return {
-    id: ASSET_ID,
-    name: 'MacBook Pro',
-    serialNo: 'MBP-001',
-    category: 'IT設備',
-    model: null, spec: null, supplier: null,
-    purchaseDate: null, purchaseCost: null,
-    location: 'Office A', assignedDept: null,
-    startDate: null, warrantyExpiry: null,
-    status: 'AVAILABLE',
-    holderId: null, description: null,
-    createdAt: new Date(), updatedAt: new Date(),
-    ...overrides,
-  };
-}
 
 function makeApp(overrides: Partial<ApplicationEntity> = {}): ApplicationEntity {
   return {
@@ -114,8 +48,6 @@ async function buildApp(): Promise<FastifyInstance> {
   return app;
 }
 
-// ─── GET /applications ─────────────────────────────────────────────────────
-
 describe('GET /applications', () => {
   let app: FastifyInstance;
 
@@ -131,8 +63,8 @@ describe('GET /applications', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it('200 — USER gets own applications (userId filter injected)', async () => {
-    appMocks.findAll.mockResolvedValue({ data: [makeApp()], total: 1, page: 1, limit: 10 });
+  it('200 — USER gets own applications', async () => {
+    serviceMocks.list.mockResolvedValue({ data: [makeApp()], total: 1, page: 1, limit: 10 });
 
     const res = await app.inject({
       method: 'GET',
@@ -141,24 +73,12 @@ describe('GET /applications', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(appMocks.findAll).toHaveBeenCalledWith(expect.objectContaining({ userId: 'user-1' }));
-  });
-
-  it('200 — ADMIN gets all applications (no userId filter)', async () => {
-    appMocks.findAll.mockResolvedValue({ data: [], total: 0, page: 1, limit: 10 });
-
-    const res = await app.inject({
-      method: 'GET',
-      url: '/applications',
-      headers: { authorization: `Bearer ${adminToken}` },
-    });
-
-    expect(res.statusCode).toBe(200);
-    expect(appMocks.findAll).toHaveBeenCalledWith(expect.objectContaining({ userId: undefined }));
+    expect(serviceMocks.list).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ userId: 'user-1', role: 'USER' }),
+    );
   });
 });
-
-// ─── GET /applications/:id ─────────────────────────────────────────────────
 
 describe('GET /applications/:id', () => {
   let app: FastifyInstance;
@@ -170,8 +90,8 @@ describe('GET /applications/:id', () => {
 
   afterEach(() => app.close());
 
-  it('200 — owner can access own application', async () => {
-    appMocks.findById.mockResolvedValue(makeApp({ userId: 'user-1' }));
+  it('200 — returns application', async () => {
+    serviceMocks.getById.mockResolvedValue(makeApp());
 
     const res = await app.inject({
       method: 'GET',
@@ -182,8 +102,8 @@ describe('GET /applications/:id', () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it('403 — USER cannot access another user\'s application', async () => {
-    appMocks.findById.mockResolvedValue(makeApp({ userId: 'other-user' }));
+  it('403 — forbidden', async () => {
+    serviceMocks.getById.mockRejectedValue(new AppError('Forbidden', 'FORBIDDEN'));
 
     const res = await app.inject({
       method: 'GET',
@@ -194,32 +114,18 @@ describe('GET /applications/:id', () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it('200 — ADMIN can access any application', async () => {
-    appMocks.findById.mockResolvedValue(makeApp({ userId: 'other-user' }));
+  it('404 — not found', async () => {
+    serviceMocks.getById.mockRejectedValue(new AppError('Application not found', 'NOT_FOUND'));
 
     const res = await app.inject({
       method: 'GET',
       url: `/applications/${APP_ID}`,
-      headers: { authorization: `Bearer ${adminToken}` },
-    });
-
-    expect(res.statusCode).toBe(200);
-  });
-
-  it('404 — application not found', async () => {
-    appMocks.findById.mockResolvedValue(null);
-
-    const res = await app.inject({
-      method: 'GET',
-      url: '/applications/nonexistent',
       headers: { authorization: `Bearer ${userToken}` },
     });
 
     expect(res.statusCode).toBe(404);
   });
 });
-
-// ─── POST /applications ────────────────────────────────────────────────────
 
 describe('POST /applications', () => {
   let app: FastifyInstance;
@@ -231,9 +137,8 @@ describe('POST /applications', () => {
 
   afterEach(() => app.close());
 
-  it('201 — creates repair request for available asset', async () => {
-    assetMocks.findById.mockResolvedValue(makeAsset({ status: 'AVAILABLE' }));
-    appMocks.create.mockResolvedValue(makeApp());
+  it('201 — creates repair request', async () => {
+    serviceMocks.submit.mockResolvedValue(makeApp());
 
     const res = await app.inject({
       method: 'POST',
@@ -243,20 +148,11 @@ describe('POST /applications', () => {
     });
 
     expect(res.statusCode).toBe(201);
-    expect(appMocks.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: 'user-1',
-        assetId: ASSET_ID,
-        status: 'PENDING',
-        faultDescription: 'Screen has dead pixels',
-      }),
-    );
-    // asset status should be set to PENDING_REPAIR after submission
-    expect(assetMocks.update).toHaveBeenCalledWith(ASSET_ID, { status: 'PENDING_REPAIR' });
+    expect(serviceMocks.submit).toHaveBeenCalledWith('user-1', expect.objectContaining({ assetId: ASSET_ID }));
   });
 
-  it('409 — asset is already PENDING_REPAIR', async () => {
-    assetMocks.findById.mockResolvedValue(makeAsset({ status: 'PENDING_REPAIR' }));
+  it('409 — asset not available', async () => {
+    serviceMocks.submit.mockRejectedValue(new AppError('Asset is not available for repair request', 'CONFLICT'));
 
     const res = await app.inject({
       method: 'POST',
@@ -266,37 +162,9 @@ describe('POST /applications', () => {
     });
 
     expect(res.statusCode).toBe(409);
-    expect(res.json().error).toBe('CONFLICT');
   });
 
-  it('409 — asset is already IN_REPAIR', async () => {
-    assetMocks.findById.mockResolvedValue(makeAsset({ status: 'IN_REPAIR' }));
-
-    const res = await app.inject({
-      method: 'POST',
-      url: '/applications',
-      headers: { authorization: `Bearer ${userToken}` },
-      payload: { assetId: ASSET_ID, faultDescription: 'Broken keyboard' },
-    });
-
-    expect(res.statusCode).toBe(409);
-    expect(res.json().error).toBe('CONFLICT');
-  });
-
-  it('404 — asset not found', async () => {
-    assetMocks.findById.mockResolvedValue(null);
-
-    const res = await app.inject({
-      method: 'POST',
-      url: '/applications',
-      headers: { authorization: `Bearer ${userToken}` },
-      payload: { assetId: 'cltest00000000000000099999', faultDescription: 'Some fault here' },
-    });
-
-    expect(res.statusCode).toBe(404);
-  });
-
-  it('400 — faultDescription too short (< 5 chars)', async () => {
+  it('400 — validation error', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/applications',
@@ -305,25 +173,13 @@ describe('POST /applications', () => {
     });
     expect(res.statusCode).toBe(400);
   });
-
-  it('401 — unauthenticated', async () => {
-    const res = await app.inject({
-      method: 'POST',
-      url: '/applications',
-      payload: { assetId: ASSET_ID, faultDescription: 'Test fault here' },
-    });
-    expect(res.statusCode).toBe(401);
-  });
 });
-
-// ─── PATCH /applications/:id/approve ──────────────────────────────────────
 
 describe('PATCH /applications/:id/approve', () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    prismaMocks.approvalCreate.mockResolvedValue({});
     app = await buildApp();
   });
 
@@ -339,9 +195,8 @@ describe('PATCH /applications/:id/approve', () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it('200 — ADMIN approves: status → IN_REPAIR, asset → IN_REPAIR', async () => {
-    appMocks.findById.mockResolvedValue(makeApp({ status: 'PENDING' }));
-    appMocks.update.mockResolvedValue(makeApp({ status: 'IN_REPAIR' }));
+  it('200 — ADMIN approves', async () => {
+    serviceMocks.approve.mockResolvedValue(makeApp({ status: 'IN_REPAIR' }));
 
     const res = await app.inject({
       method: 'PATCH',
@@ -351,27 +206,11 @@ describe('PATCH /applications/:id/approve', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(assetMocks.update).toHaveBeenCalledWith(ASSET_ID, { status: 'IN_REPAIR' });
+    expect(serviceMocks.approve).toHaveBeenCalled();
   });
 
-  it('200 — ADMIN rejects: status → REJECTED, asset restored to AVAILABLE', async () => {
-    appMocks.findById.mockResolvedValue(makeApp({ status: 'PENDING' }));
-    appMocks.update.mockResolvedValue(makeApp({ status: 'REJECTED' }));
-
-    const res = await app.inject({
-      method: 'PATCH',
-      url: `/applications/${APP_ID}/approve`,
-      headers: { authorization: `Bearer ${adminToken}` },
-      payload: { action: 'REJECTED', comment: 'Not eligible' },
-    });
-
-    expect(res.statusCode).toBe(200);
-    // asset should be restored to AVAILABLE when rejected
-    expect(assetMocks.update).toHaveBeenCalledWith(ASSET_ID, { status: 'AVAILABLE' });
-  });
-
-  it('409 — application is not PENDING', async () => {
-    appMocks.findById.mockResolvedValue(makeApp({ status: 'IN_REPAIR' }));
+  it('409 — not pending review', async () => {
+    serviceMocks.approve.mockRejectedValue(new AppError('Application is not pending review', 'CONFLICT'));
 
     const res = await app.inject({
       method: 'PATCH',
@@ -382,22 +221,45 @@ describe('PATCH /applications/:id/approve', () => {
 
     expect(res.statusCode).toBe(409);
   });
+});
 
-  it('404 — application not found', async () => {
-    appMocks.findById.mockResolvedValue(null);
+describe('PATCH /applications/:id', () => {
+  let app: FastifyInstance;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    app = await buildApp();
+  });
+
+  afterEach(() => app.close());
+
+  it('200 — owner updates pending application', async () => {
+    serviceMocks.update.mockResolvedValue(makeApp({ faultDescription: 'Updated description' }));
 
     const res = await app.inject({
       method: 'PATCH',
-      url: '/applications/nonexistent/approve',
-      headers: { authorization: `Bearer ${adminToken}` },
-      payload: { action: 'APPROVED' },
+      url: `/applications/${APP_ID}`,
+      headers: { authorization: `Bearer ${userToken}` },
+      payload: { faultDescription: 'Updated description here' },
     });
 
-    expect(res.statusCode).toBe(404);
+    expect(res.statusCode).toBe(200);
+    expect(serviceMocks.update).toHaveBeenCalledWith(APP_ID, 'user-1', expect.any(Object));
+  });
+
+  it('409 — cannot update non-pending application', async () => {
+    serviceMocks.update.mockRejectedValue(new AppError('Only PENDING applications can be edited', 'CONFLICT'));
+
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/applications/${APP_ID}`,
+      headers: { authorization: `Bearer ${userToken}` },
+      payload: { faultDescription: 'Updated description here' },
+    });
+
+    expect(res.statusCode).toBe(409);
   });
 });
-
-// ─── PATCH /applications/:id/repair-details ────────────────────────────────
 
 describe('PATCH /applications/:id/repair-details', () => {
   let app: FastifyInstance;
@@ -409,9 +271,8 @@ describe('PATCH /applications/:id/repair-details', () => {
 
   afterEach(() => app.close());
 
-  it('200 — ADMIN fills repair details', async () => {
-    appMocks.findById.mockResolvedValue(makeApp({ status: 'IN_REPAIR' }));
-    appMocks.update.mockResolvedValue(makeApp({ status: 'IN_REPAIR', repairVendor: 'TechFix Co.' }));
+  it('200 — ADMIN updates repair details', async () => {
+    serviceMocks.updateRepairDetails.mockResolvedValue(makeApp({ status: 'IN_REPAIR', repairVendor: 'TechFix Co.' }));
 
     const res = await app.inject({
       method: 'PATCH',
@@ -421,23 +282,7 @@ describe('PATCH /applications/:id/repair-details', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(appMocks.update).toHaveBeenCalledWith(
-      APP_ID,
-      expect.objectContaining({ repairVendor: 'TechFix Co.', repairCost: 5000 }),
-    );
-  });
-
-  it('409 — application is not IN_REPAIR', async () => {
-    appMocks.findById.mockResolvedValue(makeApp({ status: 'PENDING' }));
-
-    const res = await app.inject({
-      method: 'PATCH',
-      url: `/applications/${APP_ID}/repair-details`,
-      headers: { authorization: `Bearer ${adminToken}` },
-      payload: { repairVendor: 'TechFix Co.' },
-    });
-
-    expect(res.statusCode).toBe(409);
+    expect(serviceMocks.updateRepairDetails).toHaveBeenCalled();
   });
 
   it('403 — USER cannot update repair details', async () => {
@@ -445,13 +290,12 @@ describe('PATCH /applications/:id/repair-details', () => {
       method: 'PATCH',
       url: `/applications/${APP_ID}/repair-details`,
       headers: { authorization: `Bearer ${userToken}` },
-      payload: {},
+      payload: { repairVendor: 'TechFix Co.' },
     });
+
     expect(res.statusCode).toBe(403);
   });
 });
-
-// ─── PATCH /applications/:id/complete ─────────────────────────────────────
 
 describe('PATCH /applications/:id/complete', () => {
   let app: FastifyInstance;
@@ -463,9 +307,8 @@ describe('PATCH /applications/:id/complete', () => {
 
   afterEach(() => app.close());
 
-  it('200 — ADMIN completes repair; asset status resets to AVAILABLE', async () => {
-    appMocks.findById.mockResolvedValue(makeApp({ status: 'IN_REPAIR' }));
-    appMocks.update.mockResolvedValue(makeApp({ status: 'COMPLETED' }));
+  it('200 — ADMIN completes repair', async () => {
+    serviceMocks.complete.mockResolvedValue(makeApp({ status: 'COMPLETED' }));
 
     const res = await app.inject({
       method: 'PATCH',
@@ -474,23 +317,9 @@ describe('PATCH /applications/:id/complete', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(appMocks.update).toHaveBeenCalledWith(APP_ID, { status: 'COMPLETED' });
-    expect(assetMocks.update).toHaveBeenCalledWith(ASSET_ID, { status: 'AVAILABLE' });
   });
 
-  it('409 — application is not IN_REPAIR', async () => {
-    appMocks.findById.mockResolvedValue(makeApp({ status: 'PENDING' }));
-
-    const res = await app.inject({
-      method: 'PATCH',
-      url: `/applications/${APP_ID}/complete`,
-      headers: { authorization: `Bearer ${adminToken}` },
-    });
-
-    expect(res.statusCode).toBe(409);
-  });
-
-  it('403 — USER cannot complete repair', async () => {
+  it('403 — USER cannot complete', async () => {
     const res = await app.inject({
       method: 'PATCH',
       url: `/applications/${APP_ID}/complete`,

@@ -80,7 +80,8 @@ describe('POST /auth/register', () => {
       payload: { name: 'Bob', email: 'not-an-email', password: 'password123' },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toBe('VALIDATION_ERROR');
+    expect(res.json().error.code).toBe('VALIDATION_ERROR');
+    expect(res.json().error.statusCode).toBe(400);
   });
 
   it('400 — password too short (< 6 chars)', async () => {
@@ -102,7 +103,8 @@ describe('POST /auth/register', () => {
     });
 
     expect(res.statusCode).toBe(409);
-    expect(res.json().error).toBe('CONFLICT');
+    expect(res.json().error.code).toBe('CONFLICT');
+    expect(res.json().error.statusCode).toBe(409);
   });
 });
 

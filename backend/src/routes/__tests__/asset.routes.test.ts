@@ -148,7 +148,8 @@ describe('GET /assets/:id', () => {
     });
 
     expect(res.statusCode).toBe(404);
-    expect(res.json().error).toBe('NOT_FOUND');
+    expect(res.json().error.code).toBe('NOT_FOUND');
+    expect(res.json().error.statusCode).toBe(404);
   });
 });
 
@@ -196,7 +197,8 @@ describe('POST /assets', () => {
       payload: { name: 'Incomplete' },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toBe('VALIDATION_ERROR');
+    expect(res.json().error.code).toBe('VALIDATION_ERROR');
+    expect(res.json().error.statusCode).toBe(400);
   });
 });
 

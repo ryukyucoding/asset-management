@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { authMiddleware } from '@middleware/auth.middleware';
 import { storageAdapter } from '@infrastructure/storage/storage.factory';
+import { ERROR_CODES, HTTP_STATUS } from '@constants/error.constants';
+import { sendApiError } from '@domain/errors/error-response';
 
 const MAX_FILES = 5;
 
@@ -16,12 +18,17 @@ export async function uploadRoutes(fastify: FastifyInstance): Promise<void> {
         urls.push(result.url);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Upload failed';
-        return reply.status(400).send({ error: 'UPLOAD_ERROR', message });
+        return sendApiError(reply, ERROR_CODES.UPLOAD_ERROR, HTTP_STATUS.BAD_REQUEST, message);
       }
     }
 
     if (urls.length === 0) {
-      return reply.status(400).send({ error: 'NO_FILES', message: 'No files were uploaded' });
+      return sendApiError(
+        reply,
+        ERROR_CODES.NO_FILES,
+        HTTP_STATUS.BAD_REQUEST,
+        'No files were uploaded',
+      );
     }
 
     return reply.status(201).send({ urls });

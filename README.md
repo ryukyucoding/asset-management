@@ -7,6 +7,8 @@ TSMC 課程專案。支援資產借用、領用、審核流程，部署目標為
 | 文件 | 說明 |
 |------|------|
 | [docs/architecture.md](docs/architecture.md) | Overall System Architecture Diagram |
+| [docs/clean-architecture.md](docs/clean-architecture.md) | Clean Architecture（後端分層、依賴方向、元件對照） |
+| [docs/testing.md](docs/testing.md) | Testing Strategy（單元 / 整合 / E2E、覆蓋率門檻） |
 | [docs/sequence-diagram.md](docs/sequence-diagram.md) | Sequence Diagram（登入、維修申請流程、狀態機） |
 | [docs/er-diagram.md](docs/er-diagram.md) | ER Diagram（資料庫實體關係） |
 
@@ -210,10 +212,19 @@ Health check：[http://localhost:3000/health](http://localhost:3000/health)
 ```bash
 cd backend
 
-pnpm test               # 跑所有 unit test
+pnpm test               # 單元測試（Vitest）
 pnpm test:watch         # watch 模式
-pnpm test:coverage      # 含覆蓋率報告（目標 80%+）
-pnpm test:integration   # integration test（需要 DB 跑起來）
+pnpm test:coverage      # 覆蓋率報告（門檻：lines/statements 80%）
+pnpm test:integration   # 整合測試（需 PostgreSQL，見下方）
+```
+
+整合測試使用真實 PostgreSQL，請先啟動本地 DB：
+
+```bash
+docker compose up -d
+cd backend
+pnpm db:migrate:prod
+pnpm test:integration
 ```
 
 ### Frontend
@@ -221,9 +232,26 @@ pnpm test:integration   # integration test（需要 DB 跑起來）
 ```bash
 cd frontend
 
-pnpm test:unit          # Vitest unit test
-pnpm test:e2e           # Playwright E2E（需要前後端都起來）
+pnpm test:unit          # Vitest 單元測試
+pnpm test:e2e           # Playwright E2E（需前後端都起來）
 ```
+
+### 根目錄一次跑
+
+```bash
+pnpm test               # backend unit + frontend unit
+pnpm test:coverage      # backend 覆蓋率（CI 會 enforce 80%）
+pnpm test:integration   # backend 整合測試
+pnpm test:e2e           # frontend E2E
+```
+
+### 測試策略
+
+| 類型 | 工具 | 覆蓋範圍 |
+|------|------|----------|
+| 單元測試 | Vitest | Services、Routes（mock 資料層） |
+| 整合測試 | Vitest + PostgreSQL | 申請 → 審核 → 完成 完整流程 |
+| E2E | Playwright | 登入 → 提交維修 → 管理員審核 → 維修完成 |
 
 ---
 

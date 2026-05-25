@@ -91,7 +91,8 @@ describe('POST /upload', () => {
     });
 
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toBe('NO_FILES');
+    expect(res.json().error.code).toBe('NO_FILES');
+    expect(res.json().error.statusCode).toBe(400);
   });
 
   // ── successful upload ─────────────────────────────────────────────────────
@@ -157,8 +158,9 @@ describe('POST /upload', () => {
     });
 
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toBe('UPLOAD_ERROR');
-    expect(res.json().message).toBe('GCS write failed');
+    expect(res.json().error.code).toBe('UPLOAD_ERROR');
+    expect(res.json().error.statusCode).toBe(400);
+    expect(res.json().error.message).toBe('GCS write failed');
   });
 
   it('400 UPLOAD_ERROR — includes generic message for non-Error throws', async () => {
@@ -172,7 +174,8 @@ describe('POST /upload', () => {
     });
 
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toBe('UPLOAD_ERROR');
-    expect(res.json().message).toBe('Upload failed');
+    expect(res.json().error.code).toBe('UPLOAD_ERROR');
+    expect(res.json().error.statusCode).toBe(400);
+    expect(res.json().error.message).toBe('Upload failed');
   });
 });

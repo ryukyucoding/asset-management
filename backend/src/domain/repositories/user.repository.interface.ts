@@ -1,8 +1,9 @@
-import type { UserEntity } from '@domain/entities/user.entity';
+import type { UserEntity, UserRole } from '@domain/entities/user.entity';
 
 export interface IUserRepository {
   findById(id: string): Promise<UserEntity | null>;
   findByEmail(email: string): Promise<UserEntity | null>;
+  findIdsByRole(role: UserRole): Promise<string[]>;
   create(data: {
     name: string;
     email: string;

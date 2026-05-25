@@ -1,7 +1,7 @@
 import { createHmac, randomBytes } from 'crypto';
 import jwt from 'jsonwebtoken';
 import type { IUserRepository } from '@domain/repositories/user.repository.interface';
-import type { UserEntity } from '@domain/entities/user.entity';
+import type { UserEntity, UserRole } from '@domain/entities/user.entity';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? 'dev-refresh-secret';
@@ -20,7 +20,7 @@ export function verifyPassword(password: string, stored: string): boolean {
   return attempt === hash;
 }
 
-export function signAccessToken(payload: { userId: string; role: string }): string {
+export function signAccessToken(payload: { userId: string; role: UserRole }): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions);
 }
 
@@ -28,8 +28,8 @@ export function signRefreshToken(payload: { userId: string }): string {
   return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN } as jwt.SignOptions);
 }
 
-export function verifyAccessToken(token: string): { userId: string; role: string } {
-  return jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
+export function verifyAccessToken(token: string): { userId: string; role: UserRole } {
+  return jwt.verify(token, JWT_SECRET) as { userId: string; role: UserRole };
 }
 
 export function verifyRefreshToken(token: string): { userId: string } {
