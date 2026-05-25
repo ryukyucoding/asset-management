@@ -39,14 +39,13 @@ test.describe('Login flow', () => {
   test('logs in as admin and navigates to asset management', async ({ page }) => {
     await login(page, 'admin@example.com', 'Admin1234')
     await expect(page).toHaveURL(/\/admin\/assets|\/assets/)
-    // Sidebar should show Admin badge
-    await expect(page.getByText('Admin')).toBeVisible()
+    await expect(page.locator('.user-name')).toHaveText('Admin')
   })
 
   test('logs in as user and sees asset list', async ({ page }) => {
     await login(page, 'user@example.com', 'User1234')
     await expect(page).toHaveURL(/\/assets/)
-    await expect(page.getByText('User')).toBeVisible()
+    await expect(page.locator('.user-name')).toHaveText('Test User')
   })
 
   test('logout button clears session and redirects to login', async ({ page }) => {
@@ -200,7 +199,7 @@ test.describe('Admin application review', () => {
     if (rowCount > 0) {
       await expect(rows.first()).toContainText(/待審核|PENDING|PENDING_SENIOR_APPROVAL/i)
     } else {
-      await expect(page.locator('.el-table__empty-block, .el-table')).toBeVisible()
+      await expect(page.locator('.el-table__empty-block').first()).toBeVisible()
     }
   })
 })
