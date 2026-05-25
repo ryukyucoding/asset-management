@@ -1,5 +1,6 @@
 import type { INotificationRepository, NotificationEntity } from '@domain/repositories/notification.repository.interface';
 import type { IUserRepository } from '@domain/repositories/user.repository.interface';
+import { AppError } from '@domain/errors/app.errors';
 
 export class NotificationService {
   constructor(
@@ -11,8 +12,10 @@ export class NotificationService {
     return this.notificationRepo.findByUserId(userId);
   }
 
-  async markAsRead(id: string): Promise<NotificationEntity> {
-    return this.notificationRepo.markAsRead(id);
+  async markAsRead(id: string, userId: string): Promise<NotificationEntity> {
+    const notification = await this.notificationRepo.markAsRead(id, userId);
+    if (!notification) throw new AppError('Notification not found', 'NOT_FOUND');
+    return notification;
   }
 
   async markAllAsRead(userId: string): Promise<void> {

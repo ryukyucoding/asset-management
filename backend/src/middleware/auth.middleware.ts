@@ -27,13 +27,15 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
     request.user = verifyAccessToken(token);
   } catch {
     sendApiError(reply, ERROR_CODES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED, 'Invalid or expired token');
+    return;
   }
 }
 
-export function requireRole(...roles: string[]) {
+export function requireRole(...roles: UserRole[]) {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     if (!roles.includes(request.user?.role)) {
       sendApiError(reply, ERROR_CODES.FORBIDDEN, HTTP_STATUS.FORBIDDEN, 'Insufficient permissions');
+      return;
     }
   };
 }

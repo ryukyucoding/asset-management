@@ -32,16 +32,18 @@ describe('error-response', () => {
     });
     await app.ready();
 
-    const res = await app.inject({ method: 'GET', url: '/err' });
-    expect(res.statusCode).toBe(403);
-    expect(res.json()).toEqual({
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Insufficient permissions',
-        statusCode: 403,
-      },
-    });
-
-    await app.close();
+    try {
+      const res = await app.inject({ method: 'GET', url: '/err' });
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toEqual({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Insufficient permissions',
+          statusCode: 403,
+        },
+      });
+    } finally {
+      await app.close();
+    }
   });
 });

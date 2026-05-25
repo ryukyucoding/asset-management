@@ -34,14 +34,20 @@ describe('NotificationService', () => {
     expect(mockNotificationRepo.findByUserId).toHaveBeenCalledWith('user-1');
   });
 
-  it('markAsRead delegates to repository', async () => {
+  it('markAsRead delegates to repository with user scope', async () => {
     vi.mocked(mockNotificationRepo.markAsRead).mockResolvedValue({
       id: 'n-1', userId: 'user-1', type: 'TEST', message: 'msg', isRead: true, createdAt: new Date(),
     });
 
-    await service.markAsRead('n-1');
+    await service.markAsRead('n-1', 'user-1');
 
-    expect(mockNotificationRepo.markAsRead).toHaveBeenCalledWith('n-1');
+    expect(mockNotificationRepo.markAsRead).toHaveBeenCalledWith('n-1', 'user-1');
+  });
+
+  it('markAsRead throws when notification is not owned by user', async () => {
+    vi.mocked(mockNotificationRepo.markAsRead).mockResolvedValue(null);
+
+    await expect(service.markAsRead('n-1', 'user-1')).rejects.toThrow('Notification not found');
   });
 
   it('markAllAsRead delegates to repository', async () => {

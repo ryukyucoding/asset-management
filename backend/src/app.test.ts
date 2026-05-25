@@ -1,15 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import Fastify, { type FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app';
 
 const prismaMock = vi.hoisted(() => ({
-  queryRaw: vi.fn(),
+  $queryRaw: vi.fn(),
+  user: { findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), upsert: vi.fn() },
+  asset: { findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
+  application: { findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), deleteMany: vi.fn(), count: vi.fn() },
+  notification: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
+  approval: { create: vi.fn(), deleteMany: vi.fn() },
+  $disconnect: vi.fn(),
 }));
 
 vi.mock('./infrastructure/database/prisma.client', () => ({
-  prisma: {
-    $queryRaw: prismaMock.queryRaw,
-  },
+  prisma: prismaMock,
+}));
+
+vi.mock('@infrastructure/database/prisma.client', () => ({
+  prisma: prismaMock,
 }));
 
 describe('GET /health', () => {
@@ -26,7 +34,7 @@ describe('GET /health', () => {
   });
 
   it('200 — db connected', async () => {
-    prismaMock.queryRaw.mockResolvedValue([{ '?column?': 1 }]);
+    prismaMock.$queryRaw.mockResolvedValue([{ '?column?': 1 }]);
 
     const res = await app.inject({ method: 'GET', url: '/health' });
 
@@ -35,7 +43,7 @@ describe('GET /health', () => {
   });
 
   it('503 — db disconnected', async () => {
-    prismaMock.queryRaw.mockRejectedValue(new Error('connection refused'));
+    prismaMock.$queryRaw.mockRejectedValue(new Error('connection refused'));
 
     const res = await app.inject({ method: 'GET', url: '/health' });
 

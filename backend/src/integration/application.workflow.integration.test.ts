@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
+import { randomUUID } from 'crypto';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../app';
 import { prisma } from '@infrastructure/database/prisma.client';
@@ -66,7 +67,7 @@ async function seedAsset(category = 'IT設備') {
   return prisma.asset.create({
     data: {
       name: `${TEST_PREFIX} Laptop`,
-      serialNo: `${TEST_PREFIX}-${Date.now()}`,
+      serialNo: `${TEST_PREFIX}-${randomUUID()}`,
       category,
       location: 'Lab',
       status: 'AVAILABLE',

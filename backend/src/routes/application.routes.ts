@@ -33,8 +33,14 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
       );
     }
 
-    const result = await applicationService.list(query.data, request.user);
-    return reply.send(result);
+    try {
+      const result = await applicationService.list(query.data, request.user);
+      return reply.send(result);
+    } catch (err) {
+      const handled = handleAppError(err, reply);
+      if (handled) return handled;
+      throw err;
+    }
   });
 
   fastify.get('/applications/:id', { preHandler: [authMiddleware] }, async (request, reply) => {

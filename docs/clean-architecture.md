@@ -42,7 +42,6 @@ flowchart TB
     R --> AS
     R --> AP
     R --> NS
-    R --> REPO
 
     AS --> I
     AP --> I
@@ -147,6 +146,7 @@ sequenceDiagram
     participant R as application.routes
     participant S as ApplicationService
     participant N as NotificationService
+    participant NR as INotificationRepository
     participant AR as IAssetRepository
     participant AP as IApplicationRepository
     participant PR as Prisma
@@ -161,7 +161,8 @@ sequenceDiagram
     AP->>PR: INSERT application
     S->>AR: update(PENDING_REPAIR)
     S->>N: notifyApplicationSubmitted(assetName)
-    N->>PR: INSERT notifications (ADMIN)
+    N->>NR: create notifications (ADMIN)
+    NR->>PR: INSERT notifications
     S-->>R: ApplicationEntity
     R-->>U: 201 Created
 ```

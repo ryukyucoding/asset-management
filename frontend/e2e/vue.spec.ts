@@ -130,10 +130,7 @@ test.describe('Full repair workflow', () => {
     await expect(assetRow).toBeVisible({ timeout: 10_000 })
 
     const submitBtn = assetRow.getByRole('button', { name: /提交維修|submit repair/i })
-    if (await submitBtn.isDisabled()) {
-      test.skip(true, 'Demo asset is not AVAILABLE — re-run db:seed for a clean state')
-      return
-    }
+    await expect(submitBtn).toBeEnabled({ timeout: 10_000 })
 
     await submitBtn.click()
     await expect(page.locator('.el-dialog')).toBeVisible()
@@ -193,8 +190,18 @@ test.describe('Admin application review', () => {
     await expect(page.locator('.el-table')).toBeVisible()
   })
 
-  test('pending filter shows applications table', async ({ page }) => {
-    await expect(page.locator('.el-table')).toBeVisible()
+  test('pending filter shows pending applications', async ({ page }) => {
+    await page.locator('.filter-bar .el-select').click()
+    await page.getByRole('option', { name: /待審核|PENDING/i }).first().click()
+    await page.waitForTimeout(500)
+
+    const rows = page.locator('.el-table__body-wrapper .el-table__row')
+    const rowCount = await rows.count()
+    if (rowCount > 0) {
+      await expect(rows.first()).toContainText(/待審核|PENDING|PENDING_SENIOR_APPROVAL/i)
+    } else {
+      await expect(page.locator('.el-table__empty-block, .el-table')).toBeVisible()
+    }
   })
 })
 

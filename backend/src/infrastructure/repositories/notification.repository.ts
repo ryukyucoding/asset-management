@@ -13,8 +13,14 @@ export class NotificationRepository implements INotificationRepository {
     return prisma.notification.create({ data });
   }
 
-  async markAsRead(id: string): Promise<NotificationEntity> {
-    return prisma.notification.update({ where: { id }, data: { isRead: true } });
+  async markAsRead(id: string, userId: string): Promise<NotificationEntity | null> {
+    const notification = await prisma.notification.findFirst({ where: { id, userId } });
+    if (!notification) return null;
+
+    return prisma.notification.update({
+      where: { id },
+      data: { isRead: true },
+    });
   }
 
   async markAllAsRead(userId: string): Promise<void> {

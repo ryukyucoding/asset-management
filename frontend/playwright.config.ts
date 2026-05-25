@@ -59,9 +59,6 @@ export default defineConfig({
           url: frontendBaseUrl,
           reuseExistingServer: false,
           timeout: 120_000,
-          env: {
-            VITE_API_URL: 'http://localhost:3000',
-          },
         },
       ]
     : {

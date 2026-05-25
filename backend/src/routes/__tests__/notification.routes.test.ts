@@ -76,7 +76,7 @@ describe('PATCH /notifications/:id/read', () => {
     });
 
     expect(res.statusCode).toBe(200);
-    expect(serviceMocks.markAsRead).toHaveBeenCalledWith('n-1');
+    expect(serviceMocks.markAsRead).toHaveBeenCalledWith('n-1', 'user-1');
   });
 });
 

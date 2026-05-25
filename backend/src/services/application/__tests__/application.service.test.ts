@@ -178,9 +178,7 @@ describe('ApplicationService', () => {
 
   describe('approve', () => {
     it('ADMIN approves general asset → IN_REPAIR', async () => {
-      vi.mocked(mockApplicationRepo.findById)
-        .mockResolvedValueOnce(makeApp({ status: 'PENDING' }))
-        .mockResolvedValueOnce(makeApp({ status: 'IN_REPAIR' }));
+      vi.mocked(mockApplicationRepo.findById).mockResolvedValue(makeApp({ status: 'PENDING' }));
       vi.mocked(mockApplicationRepo.update).mockResolvedValue(makeApp({ status: 'IN_REPAIR' }));
 
       const result = await service.approve(APP_ID, { userId: 'admin-1', role: 'ADMIN' }, { action: 'APPROVED' });
@@ -191,12 +189,11 @@ describe('ApplicationService', () => {
     });
 
     it('ADMIN approves high-value asset → PENDING_SENIOR_APPROVAL', async () => {
-      vi.mocked(mockApplicationRepo.findById)
-        .mockResolvedValueOnce(makeApp({
-          status: 'PENDING',
-          asset: makeAsset({ category: 'HIGH_VALUE' }),
-        }))
-        .mockResolvedValueOnce(makeApp({ status: 'PENDING_SENIOR_APPROVAL' }));
+      vi.mocked(mockApplicationRepo.findById).mockResolvedValue(makeApp({
+        status: 'PENDING',
+        asset: makeAsset({ category: 'HIGH_VALUE' }),
+      }));
+      vi.mocked(mockApplicationRepo.update).mockResolvedValue(makeApp({ status: 'PENDING_SENIOR_APPROVAL' }));
 
       await service.approve(APP_ID, { userId: 'admin-1', role: 'ADMIN' }, { action: 'APPROVED' });
 
@@ -206,9 +203,8 @@ describe('ApplicationService', () => {
     });
 
     it('ADMIN rejects → REJECTED and asset restored to AVAILABLE', async () => {
-      vi.mocked(mockApplicationRepo.findById)
-        .mockResolvedValueOnce(makeApp({ status: 'PENDING' }))
-        .mockResolvedValueOnce(makeApp({ status: 'REJECTED' }));
+      vi.mocked(mockApplicationRepo.findById).mockResolvedValue(makeApp({ status: 'PENDING' }));
+      vi.mocked(mockApplicationRepo.update).mockResolvedValue(makeApp({ status: 'REJECTED' }));
 
       await service.approve(APP_ID, { userId: 'admin-1', role: 'ADMIN' }, { action: 'REJECTED', comment: 'No budget' });
 
@@ -255,7 +251,6 @@ describe('ApplicationService', () => {
     it('marks application COMPLETED and asset AVAILABLE', async () => {
       vi.mocked(mockApplicationRepo.findById).mockResolvedValue(makeApp({ status: 'IN_REPAIR' }));
       vi.mocked(mockApplicationRepo.update).mockResolvedValue(makeApp({ status: 'COMPLETED' }));
-      vi.mocked(mockAssetRepo.findById).mockResolvedValue(makeAsset({ status: 'IN_REPAIR' }));
 
       const result = await service.complete(APP_ID);
 

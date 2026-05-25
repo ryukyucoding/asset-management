@@ -116,21 +116,20 @@ export class ApplicationService {
 
     const assetName = application.asset?.name ?? '資產';
 
+    let updated: ApplicationEntity;
     if (data.action === 'REJECTED') {
-      await this.applicationRepo.update(id, { status: 'REJECTED' });
+      updated = await this.applicationRepo.update(id, { status: 'REJECTED' });
       await this.assetRepo.update(application.assetId, { status: 'AVAILABLE' });
       await this.notificationService.notifyApplicationRejected(application.userId, assetName, data.comment);
     } else if (currentStepIndex + 1 < steps.length) {
-      await this.applicationRepo.update(id, { status: 'PENDING_SENIOR_APPROVAL' });
+      updated = await this.applicationRepo.update(id, { status: 'PENDING_SENIOR_APPROVAL' });
       await this.notificationService.notifyPendingSeniorApproval(assetName);
     } else {
-      await this.applicationRepo.update(id, { status: 'IN_REPAIR' });
+      updated = await this.applicationRepo.update(id, { status: 'IN_REPAIR' });
       await this.assetRepo.update(application.assetId, { status: 'IN_REPAIR' });
       await this.notificationService.notifyApplicationApproved(application.userId, assetName);
     }
 
-    const updated = await this.applicationRepo.findById(id);
-    if (!updated) throw new AppError('Application not found', 'NOT_FOUND');
     return updated;
   }
 
@@ -155,13 +154,10 @@ export class ApplicationService {
       throw new AppError('Application is not in repair state', 'CONFLICT');
     }
 
+    const assetName = application.asset?.name ?? '資產';
     const updated = await this.applicationRepo.update(id, { status: 'COMPLETED' });
-    const asset = await this.assetRepo.findById(application.assetId);
     await this.assetRepo.update(application.assetId, { status: 'AVAILABLE' });
-    await this.notificationService.notifyRepairCompleted(
-      application.userId,
-      asset?.name ?? '資產',
-    );
+    await this.notificationService.notifyRepairCompleted(application.userId, assetName);
 
     return updated;
   }

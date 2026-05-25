@@ -49,13 +49,16 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     try {
       const result = await authService.login(body.data.email, body.data.password);
       return reply.send(result);
-    } catch {
-      return sendApiError(
-        reply,
-        ERROR_CODES.UNAUTHORIZED,
-        HTTP_STATUS.UNAUTHORIZED,
-        'Invalid credentials',
-      );
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === 'Invalid credentials') {
+        return sendApiError(
+          reply,
+          ERROR_CODES.UNAUTHORIZED,
+          HTTP_STATUS.UNAUTHORIZED,
+          'Invalid credentials',
+        );
+      }
+      throw err;
     }
   });
 
@@ -70,15 +73,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       );
     }
 
+    let payload: { userId: string };
     try {
-      const payload = verifyRefreshToken(refreshToken);
-      const user = await userRepo.findById(payload.userId);
-      if (!user) {
-        return sendApiError(reply, ERROR_CODES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED, 'Unauthorized');
-      }
-
-      const accessToken = signAccessToken({ userId: user.id, role: user.role });
-      return reply.send({ accessToken });
+      payload = verifyRefreshToken(refreshToken);
     } catch {
       return sendApiError(
         reply,
@@ -87,6 +84,14 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         'Invalid refresh token',
       );
     }
+
+    const user = await userRepo.findById(payload.userId);
+    if (!user) {
+      return sendApiError(reply, ERROR_CODES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED, 'Unauthorized');
+    }
+
+    const accessToken = signAccessToken({ userId: user.id, role: user.role });
+    return reply.send({ accessToken });
   });
 
   fastify.post('/auth/logout', { preHandler: [authMiddleware] }, async (_request, reply) => {

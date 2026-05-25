@@ -3,6 +3,7 @@ import { NotificationRepository } from '@infrastructure/repositories/notificatio
 import { UserRepository } from '@infrastructure/repositories/user.repository';
 import { NotificationService } from '@services/notification/notification.service';
 import { authMiddleware } from '@middleware/auth.middleware';
+import { handleAppError } from '@domain/errors/app.errors';
 
 const notificationService = new NotificationService(new NotificationRepository(), new UserRepository());
 
@@ -14,8 +15,15 @@ export async function notificationRoutes(fastify: FastifyInstance): Promise<void
 
   fastify.patch('/notifications/:id/read', { preHandler: [authMiddleware] }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const notification = await notificationService.markAsRead(id);
-    return reply.send(notification);
+
+    try {
+      const notification = await notificationService.markAsRead(id, request.user.userId);
+      return reply.send(notification);
+    } catch (err) {
+      const handled = handleAppError(err, reply);
+      if (handled) return handled;
+      throw err;
+    }
   });
 
   fastify.patch('/notifications/read-all', { preHandler: [authMiddleware] }, async (request, reply) => {
