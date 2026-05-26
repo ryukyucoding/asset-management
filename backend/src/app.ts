@@ -11,6 +11,7 @@ import { uploadRoutes } from './routes/upload.routes';
 import { ERROR_CODES, HTTP_STATUS } from './constants/error.constants';
 import { sendApiError } from './domain/errors/error-response';
 import { prisma } from './infrastructure/database/prisma.client';
+import { pingRedis, closeRedisClient } from './infrastructure/cache/redis.client';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -49,17 +50,20 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   fastify.get('/health', async (_request, reply) => {
     const timestamp = new Date().toISOString();
+    const redisConnected = await pingRedis();
     try {
       await prisma.$queryRaw`SELECT 1`;
       return reply.status(HTTP_STATUS.OK).send({
-        status: 'ok',
+        status: redisConnected ? 'ok' : 'degraded',
         db: 'connected',
+        redis: redisConnected ? 'connected' : 'disconnected',
         timestamp,
       });
     } catch {
       return reply.status(HTTP_STATUS.SERVICE_UNAVAILABLE).send({
         status: 'degraded',
         db: 'disconnected',
+        redis: redisConnected ? 'connected' : 'disconnected',
         timestamp,
       });
     }
@@ -70,6 +74,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(applicationRoutes);
   await fastify.register(notificationRoutes);
   await fastify.register(uploadRoutes);
+  fastify.addHook('onClose', async () => {
+    await closeRedisClient();
+  });
 
   return fastify;
 }

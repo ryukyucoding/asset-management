@@ -108,6 +108,35 @@ docker exec asset-management-postgres-1 \
  user@example.com  | USER
 ```
 
+### 大量測試資料（10,000 筆資產 + 1,000 筆申請）
+
+僅供**本地開發**壓力／分頁測試，請勿對 Cloud Run 生產資料庫執行。
+
+```bash
+# 前置：Docker、migration、基本 seed（帳號 + 示範資產）
+docker compose up -d
+cd backend
+pnpm db:migrate
+pnpm db:seed
+
+# 灌入 bulk 資料（序號前綴 BULK-，不影響 seed 範例）
+pnpm db:seed:bulk
+# 自訂筆數：pnpm db:seed:bulk -- --assets 10000 --applications 1000
+
+# 驗證
+docker exec asset-management-postgres-1 \
+  psql -U postgres -d asset_management \
+  -c "SELECT COUNT(*) FROM assets WHERE \"serialNo\" LIKE 'BULK-%';"
+```
+
+清除 bulk 資料後重灌：
+
+```bash
+cd backend
+pnpm db:seed:bulk -- --clear    # 只刪 BULK-* 資產與關聯申請
+pnpm db:seed:bulk               # 重新灌入
+```
+
 ### 重置資料庫（清空重來）
 
 ```bash
@@ -185,6 +214,7 @@ pnpm db:generate
 | `pnpm db:migrate:prod` | 套用所有 pending migrations（生產用，不建立新的） |
 | `pnpm db:generate` | 重新產生 Prisma Client（schema 改動後執行） |
 | `pnpm db:seed` | 填入種子資料（admin + user + 範例資產） |
+| `pnpm db:seed:bulk` | 本地大量測試資料（預設 10k 資產 + 1k 申請，序號 `BULK-*`） |
 | `pnpm db:reset` | 清空 DB 並重跑所有 migration + seed（開發用） |
 
 ## 啟動開發伺服器
@@ -332,6 +362,8 @@ export BACKEND_SERVICE="asset-backend"
 export DB_INSTANCE_CONNECTION_NAME="${PROJECT_ID}:${REGION}:${DB_INSTANCE_NAME}"
 export REDIS_HOST="10.x.x.x"
 export REDIS_PORT="6379"
+export VPC_CONNECTOR="asset-run-connector"
+export VPC_EGRESS="private-ranges-only"
 export DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:5432/asset_management?schema=public"
 bash scripts/gcp/deploy-backend-cloudrun.sh
 ```
@@ -349,6 +381,25 @@ bash scripts/gcp/deploy-frontend-cloudrun.sh
 - 自動部署 workflow：`.github/workflows/deploy-cloudrun.yml`
 - 觸發條件：`push main` 或手動 `workflow_dispatch`
 - 流程：build/push image -> deploy backend -> smoke test -> deploy frontend
+- 必填 GitHub Repository Variables：
+  - `GCP_PROJECT_ID`
+  - `GCP_REGION`
+  - `GCP_ARTIFACT_REPO`
+  - `CLOUD_RUN_BACKEND_SERVICE`
+  - `CLOUD_RUN_FRONTEND_SERVICE`
+  - `CLOUD_SQL_CONNECTION_NAME`
+  - `REDIS_HOST`
+  - `REDIS_PORT`
+  - `CLOUD_RUN_SERVICE_ACCOUNT`
+  - `GCS_BUCKET_NAME`
+  - `FRONTEND_URL`
+  - `VPC_CONNECTOR`
+- 選填 GitHub Repository Variable：
+  - `VPC_EGRESS`（預設 `private-ranges-only`）
+- 必填 GitHub Secrets：
+  - `DATABASE_URL`
+  - `GCP_WORKLOAD_IDENTITY_PROVIDER`
+  - `GCP_DEPLOYER_SERVICE_ACCOUNT`
 
 ### Zero Downtime 關鍵設定
 

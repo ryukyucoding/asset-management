@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   findById:    vi.fn(),
   create:      vi.fn(),
   update:      vi.fn(),
+  incrementWithTtl: vi.fn(),
 }));
 
 vi.mock('@infrastructure/repositories/user.repository', () => ({
@@ -18,6 +19,10 @@ vi.mock('@infrastructure/repositories/user.repository', () => ({
     create:      mocks.create,
     update:      mocks.update,
   })),
+}));
+
+vi.mock('@infrastructure/cache/redis.client', () => ({
+  incrementWithTtl: mocks.incrementWithTtl,
 }));
 
 import { authRoutes } from '../auth.routes';
@@ -51,6 +56,7 @@ describe('POST /auth/register', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mocks.incrementWithTtl.mockResolvedValue(1);
     app = await buildApp();
   });
 
@@ -113,6 +119,7 @@ describe('POST /auth/login', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mocks.incrementWithTtl.mockResolvedValue(1);
     app = await buildApp();
   });
 
@@ -166,6 +173,19 @@ describe('POST /auth/login', () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it('429 — too many login attempts from same IP', async () => {
+    mocks.incrementWithTtl.mockResolvedValue(11);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { email: 'alice@example.com', password: 'password123' },
+    });
+
+    expect(res.statusCode).toBe(429);
+    expect(res.json().error).toBe('TOO_MANY_REQUESTS');
+  });
 });
 
 describe('POST /auth/refresh', () => {
@@ -173,6 +193,7 @@ describe('POST /auth/refresh', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mocks.incrementWithTtl.mockResolvedValue(1);
     app = await buildApp();
   });
 
@@ -216,6 +237,7 @@ describe('POST /auth/logout', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mocks.incrementWithTtl.mockResolvedValue(1);
     app = await buildApp();
   });
 

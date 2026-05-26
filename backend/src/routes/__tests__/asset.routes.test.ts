@@ -12,6 +12,10 @@ const mocks = vi.hoisted(() => ({
   delete:   vi.fn(),
 }));
 
+const prismaMocks = vi.hoisted(() => ({
+  assetFindMany: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('@infrastructure/repositories/asset.repository', () => ({
   AssetRepository: vi.fn().mockImplementation(() => ({
     findAll:  mocks.findAll,
@@ -20,6 +24,14 @@ vi.mock('@infrastructure/repositories/asset.repository', () => ({
     update:   mocks.update,
     delete:   mocks.delete,
   })),
+}));
+
+vi.mock('@infrastructure/database/prisma.client', () => ({
+  prisma: {
+    asset: {
+      findMany: prismaMocks.assetFindMany,
+    },
+  },
 }));
 
 import { assetRoutes } from '../asset.routes';

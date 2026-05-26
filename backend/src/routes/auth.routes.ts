@@ -6,9 +6,23 @@ import { authMiddleware, requireRole } from '@middleware/auth.middleware';
 import { verifyRefreshToken, signAccessToken } from '@services/auth/auth.service';
 import { ERROR_CODES, HTTP_STATUS } from '@constants/error.constants';
 import { sendApiError } from '@domain/errors/error-response';
+import { incrementWithTtl } from '@infrastructure/cache/redis.client';
 
 const userRepo = new UserRepository();
 const authService = new AuthService(userRepo);
+const LOGIN_RATE_LIMIT_WINDOW_SECONDS = 60;
+const LOGIN_RATE_LIMIT_MAX_REQUESTS = 10;
+
+async function isLoginRateLimited(ip: string, fastify: FastifyInstance): Promise<boolean> {
+  const key = `rate-limit:auth-login:${ip}`;
+  try {
+    const attempts = await incrementWithTtl(key, LOGIN_RATE_LIMIT_WINDOW_SECONDS);
+    return attempts > LOGIN_RATE_LIMIT_MAX_REQUESTS;
+  } catch (error: unknown) {
+    fastify.log.warn({ err: error }, 'Redis login rate limit unavailable; fallback to allow');
+    return false;
+  }
+}
 
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/auth/register', async (request, reply) => {
@@ -44,6 +58,13 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         'Invalid request body',
         body.error.flatten(),
       );
+    }
+
+    if (await isLoginRateLimited(request.ip, fastify)) {
+      return reply.status(429).send({
+        error: 'TOO_MANY_REQUESTS',
+        message: 'Too many login attempts. Please try again later.',
+      });
     }
 
     try {

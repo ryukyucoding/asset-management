@@ -12,7 +12,8 @@
     "test:integration": "pnpm --filter backend test:integration",
     "test:e2e": "pnpm --filter frontend test:e2e",
     "db:migrate": "pnpm --filter backend db:migrate",
-    "db:seed": "pnpm --filter backend db:seed"
+    "db:seed": "pnpm --filter backend db:seed",
+    "db:seed:bulk": "pnpm --filter backend db:seed:bulk"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
