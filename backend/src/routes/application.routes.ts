@@ -102,7 +102,7 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
   });
 
   // ─── 審核（目前統一為 ADMIN 單步審批）────────────────────────
-  fastify.patch('/applications/:id/approve', { preHandler: [authMiddleware, requireRole('ADMIN', 'SENIOR_ADMIN')] }, async (request, reply) => {
+  fastify.patch('/applications/:id/approve', { preHandler: [authMiddleware, requireRole('ADMIN')] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = ReviewApplicationDTO.safeParse(request.body);
     if (!body.success) {

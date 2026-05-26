@@ -142,7 +142,6 @@ const ja: MessageSchema = {
     photoCount: '{count} 枚',
     statusMap: {
       PENDING: '審査中',
-      PENDING_SENIOR_APPROVAL: '上位承認待ち',
       IN_REPAIR: '修理中',
       COMPLETED: '修理完了',
       REJECTED: '却下',

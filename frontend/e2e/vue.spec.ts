@@ -197,7 +197,7 @@ test.describe('Admin application review', () => {
     const rows = page.locator('.el-table__body-wrapper .el-table__row')
     const rowCount = await rows.count()
     if (rowCount > 0) {
-      await expect(rows.first()).toContainText(/待審核|PENDING|PENDING_SENIOR_APPROVAL/i)
+      await expect(rows.first()).toContainText(/待審核|PENDING/i)
     } else {
       await expect(page.locator('.el-table__empty-block').first()).toBeVisible()
     }

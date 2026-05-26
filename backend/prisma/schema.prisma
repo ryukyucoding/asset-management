@@ -21,8 +21,8 @@ enum AssetStatus {
 }
 
 enum ApplicationStatus {
-  PENDING                  // 待審核（第一關）
-  PENDING_SENIOR_APPROVAL  // 待高階主管審核（高價值設備第二關）
+  PENDING                  // 待審核
+  PENDING_SENIOR_APPROVAL  // legacy 狀態（保留 DB 相容，應用層不再使用）
   IN_REPAIR                // 維修中（全部審核通過）
   COMPLETED                // 維修完成
   REJECTED                 // 已拒絕

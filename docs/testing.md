@@ -37,7 +37,7 @@ Infrastructure（Prisma Repository、Storage）由整合測試驗證。
 - 覆蓋流程：
   - 申請 → ADMIN 核准 → 填寫維修細節 → 完成
   - ADMIN 拒絕 → 資產恢復 AVAILABLE
-  - 高價值設備：ADMIN → SENIOR_ADMIN 兩步審核
+  - 高價值設備：ADMIN 單步審核
 
 ## E2E 測試範圍
 

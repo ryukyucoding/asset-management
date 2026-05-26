@@ -75,14 +75,6 @@ describe('NotificationService', () => {
     });
   });
 
-  it('notifyPendingSeniorApproval notifies all senior admins', async () => {
-    vi.mocked(mockUserRepo.findIdsByRole).mockResolvedValue(['senior-1']);
-
-    await service.notifyPendingSeniorApproval('Server Rack');
-
-    expect(mockUserRepo.findIdsByRole).toHaveBeenCalledWith('SENIOR_ADMIN');
-  });
-
   it('notifyApplicationApproved sends message to applicant', async () => {
     await service.notifyApplicationApproved('user-1', 'MacBook Pro');
 

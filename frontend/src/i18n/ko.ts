@@ -142,7 +142,6 @@ const ko: MessageSchema = {
     photoCount: '{count}장',
     statusMap: {
       PENDING: '검토 중',
-      PENDING_SENIOR_APPROVAL: '고위 승인 대기',
       IN_REPAIR: '수리 중',
       COMPLETED: '수리 완료',
       REJECTED: '반려됨',

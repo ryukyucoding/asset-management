@@ -19,7 +19,7 @@ export interface ApplicationActor {
   role: UserRole;
 }
 
-const PENDING_REVIEW_STATUSES = ['PENDING', 'PENDING_SENIOR_APPROVAL'] as const;
+const PENDING_REVIEW_STATUSES = ['PENDING'] as const;
 
 export class ApplicationService {
   constructor(
@@ -94,7 +94,7 @@ export class ApplicationService {
       throw new AppError('Application is not pending review', 'CONFLICT');
     }
 
-    // 統一為單步審批，舊狀態 PENDING_SENIOR_APPROVAL 也收斂到同一關。
+    // 統一為單步審批。
     const steps = resolveApprovalSteps(application);
     const currentStep = steps[0];
 
@@ -121,9 +121,6 @@ export class ApplicationService {
       updated = await this.applicationRepo.update(id, { status: 'REJECTED' });
       await this.assetRepo.update(application.assetId, { status: 'AVAILABLE' });
       await this.notificationService.notifyApplicationRejected(application.userId, assetName, data.comment);
-    } else if (steps.length > 1) {
-      updated = await this.applicationRepo.update(id, { status: 'PENDING_SENIOR_APPROVAL' });
-      await this.notificationService.notifyPendingSeniorApproval(assetName);
     } else {
       updated = await this.applicationRepo.update(id, { status: 'IN_REPAIR' });
       await this.assetRepo.update(application.assetId, { status: 'IN_REPAIR' });

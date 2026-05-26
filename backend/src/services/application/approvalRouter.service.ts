@@ -1,7 +1,7 @@
 import type { ApplicationEntity } from '@domain/entities/application.entity';
 
 export interface ApprovalStep {
-  role: 'ADMIN' | 'SENIOR_ADMIN';
+  role: 'ADMIN';
   step: number;
 }
 

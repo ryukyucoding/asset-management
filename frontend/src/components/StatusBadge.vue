@@ -17,7 +17,6 @@ const variant = computed(() => {
     COMPLETED:      'success',
     IN_REPAIR:      'warning',
     PENDING:                 'pending',
-    PENDING_SENIOR_APPROVAL: 'notice',
     PENDING_REPAIR: 'notice',
     BORROWED:       'warning',
     CLAIMED:        'info',

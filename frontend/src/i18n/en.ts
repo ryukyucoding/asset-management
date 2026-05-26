@@ -144,7 +144,6 @@ const en: MessageSchema = {
     photoCount: '{count}',
     statusMap: {
       PENDING: 'Pending',
-      PENDING_SENIOR_APPROVAL: 'Awaiting Senior Approval',
       IN_REPAIR: 'In Repair',
       COMPLETED: 'Completed',
       REJECTED: 'Rejected',

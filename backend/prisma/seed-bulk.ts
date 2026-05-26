@@ -116,15 +116,13 @@ function planApplicationStatuses(count: number): AppStatusPlan[] {
     for (let i = 0; i < n; i++) plans.push({ status, assetStatus });
   };
 
-  // ~40% pending (incl. senior), ~20% in repair, ~30% completed, ~10% rejected
-  const pending = Math.floor(count * 0.35);
-  const senior = Math.floor(count * 0.05);
+  // ~40% pending, ~20% in repair, ~30% completed, ~10% rejected
+  const pending = Math.floor(count * 0.4);
   const inRepair = Math.floor(count * 0.2);
   const completed = Math.floor(count * 0.3);
-  const rejected = count - pending - senior - inRepair - completed;
+  const rejected = count - pending - inRepair - completed;
 
   push(pending, 'PENDING', 'PENDING_REPAIR');
-  push(senior, 'PENDING_SENIOR_APPROVAL', 'PENDING_REPAIR');
   push(inRepair, 'IN_REPAIR', 'IN_REPAIR');
   push(completed, 'COMPLETED', 'AVAILABLE');
   push(rejected, 'REJECTED', 'AVAILABLE');
@@ -169,20 +167,6 @@ async function seedApplications(count: number, userId: string): Promise<void> {
 
   const selected = shuffle(bulkAssets).slice(0, count);
   const statusPlans = planApplicationStatuses(count);
-
-  // Assign PENDING_SENIOR_APPROVAL preferentially to HIGH_VALUE assets
-  const seniorIndices: number[] = [];
-  for (let i = 0; i < statusPlans.length; i++) {
-    if (statusPlans[i].status === 'PENDING_SENIOR_APPROVAL') seniorIndices.push(i);
-  }
-  const highValuePositions = selected
-    .map((a, i) => (a.category === 'HIGH_VALUE' ? i : -1))
-    .filter((i) => i >= 0);
-  for (let s = 0; s < seniorIndices.length && s < highValuePositions.length; s++) {
-    const from = seniorIndices[s];
-    const to = highValuePositions[s];
-    [statusPlans[from], statusPlans[to]] = [statusPlans[to], statusPlans[from]];
-  }
 
   const applications = selected.map((asset, i) => ({
     userId,

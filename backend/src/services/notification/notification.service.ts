@@ -43,19 +43,6 @@ export class NotificationService {
     });
   }
 
-  async notifyPendingSeniorApproval(assetName: string): Promise<void> {
-    const seniorAdminIds = await this.userRepo.findIdsByRole('SENIOR_ADMIN');
-    await Promise.all(
-      seniorAdminIds.map((userId) =>
-        this.notificationRepo.create({
-          userId,
-          type: 'APPLICATION_PENDING_SENIOR_APPROVAL',
-          message: `「${assetName}」維修申請需要您的最終審核`,
-        }),
-      ),
-    );
-  }
-
   async notifyApplicationApproved(userId: string, assetName: string): Promise<void> {
     await this.notificationRepo.create({
       userId,

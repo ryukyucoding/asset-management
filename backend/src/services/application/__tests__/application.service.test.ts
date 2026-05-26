@@ -66,7 +66,6 @@ const mockApprovalRepo: IApprovalRepository = {
 const mockNotificationService = {
   notifyApplicationSubmitted: vi.fn().mockResolvedValue(undefined),
   notifyApplicationRejected: vi.fn().mockResolvedValue(undefined),
-  notifyPendingSeniorApproval: vi.fn().mockResolvedValue(undefined),
   notifyApplicationApproved: vi.fn().mockResolvedValue(undefined),
   notifyRepairCompleted: vi.fn().mockResolvedValue(undefined),
 } as unknown as NotificationService;

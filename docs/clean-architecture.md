@@ -108,7 +108,7 @@ flowchart LR
 |------|------|------|
 | **AuthService** | `services/auth/auth.service.ts` | 登入、註冊、JWT 簽發與驗證 |
 | **ApplicationService** | `services/application/application.service.ts` | 維修申請生命週期：提交、審核、維修、完成 |
-| **resolveApprovalSteps** | `services/application/approvalRouter.service.ts` | 依資產類別決定審批步驟（ADMIN 一步 / SENIOR_ADMIN 兩步） |
+| **resolveApprovalSteps** | `services/application/approvalRouter.service.ts` | 統一回傳 ADMIN 單步審批流程 |
 | **NotificationService** | `services/notification/notification.service.ts` | 申請狀態變更時發送站內通知 |
 
 ---

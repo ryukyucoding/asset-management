@@ -110,7 +110,7 @@ docker exec asset-management-postgres-1 \
 
 ### 大量測試資料（10,000 筆資產 + 1,000 筆申請）
 
-僅供**本地開發**壓力／分頁測試，請勿對 Cloud Run 生產資料庫執行。
+預設用於**本地開發**壓力／分頁測試。若要灌到 Cloud SQL，請先看下方「Cloud SQL 批次灌資料（安全流程）」。
 
 ```bash
 # 前置：Docker、migration、基本 seed（帳號 + 示範資產）
@@ -136,6 +136,76 @@ cd backend
 pnpm db:seed:bulk -- --clear    # 只刪 BULK-* 資產與關聯申請
 pnpm db:seed:bulk               # 重新灌入
 ```
+
+### Cloud SQL 批次灌資料（安全流程）
+
+> 建議先灌小量（例如 `1000/100`）確認沒問題，再放大到 `10000/1000`。
+
+```bash
+# 0) 設定專案參數
+export PROJECT_ID="your-project-id"
+export REGION="asia-east1"
+export DB_INSTANCE_NAME="asset-mgmt-db"
+export BUCKET_NAME="asset-mgmt-db-backup-xxxx"
+```
+
+```bash
+# 1) 先備份 Cloud SQL（建議）
+gcloud storage buckets create "gs://${BUCKET_NAME}" --location="${REGION}" || true
+
+# 找出 Cloud SQL 實際 service account（不要猜名稱）
+CLOUDSQL_SA="$(gcloud sql instances describe "${DB_INSTANCE_NAME}" \
+  --project "${PROJECT_ID}" \
+  --format='value(serviceAccountEmailAddress)')"
+echo "${CLOUDSQL_SA}"
+
+# 給匯出備份所需權限
+gcloud storage buckets add-iam-policy-binding "gs://${BUCKET_NAME}" \
+  --member="serviceAccount:${CLOUDSQL_SA}" \
+  --role="roles/storage.objectAdmin" \
+  --project "${PROJECT_ID}"
+
+# 匯出備份
+gcloud sql export sql "${DB_INSTANCE_NAME}" \
+  "gs://${BUCKET_NAME}/pre-seed-$(date +%Y%m%d-%H%M%S).sql.gz" \
+  --database=asset_management \
+  --project "${PROJECT_ID}"
+```
+
+```bash
+# 2) 用 Cloud SQL Proxy 連線（macOS M-series 範例）
+curl -fL "https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.18.2/cloud-sql-proxy.darwin.arm64" \
+  -o /tmp/cloud-sql-proxy
+chmod +x /tmp/cloud-sql-proxy
+
+# 若 5432 被 Docker 佔用，可改用 6543
+/tmp/cloud-sql-proxy --gcloud-auth "${PROJECT_ID}:${REGION}:${DB_INSTANCE_NAME}" --port 6543
+```
+
+```bash
+# 3) 另開一個 terminal，指到 Cloud SQL 後灌資料
+cd /path/to/asset-management
+DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:6543/asset_management?schema=public" \
+  pnpm --filter asset-management-backend exec tsx prisma/seed-bulk.ts --assets 1000 --applications 100
+```
+
+```bash
+# 4) 驗證 BULK 筆數（schema 參數不帶入 psql URI）
+psql "postgresql://db_user:db_password@127.0.0.1:6543/asset_management" \
+  -c "SELECT COUNT(*) AS bulk_assets FROM assets WHERE \"serialNo\" LIKE 'BULK-%';" \
+  -c "SELECT COUNT(*) AS bulk_apps FROM applications WHERE \"faultDescription\" LIKE '[BULK] %';"
+```
+
+```bash
+# 5) 清除 BULK 測試資料（只刪 BULK-*）
+cd backend
+DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:6543/asset_management?schema=public" \
+  pnpm exec tsx prisma/seed-bulk.ts --clear
+```
+
+說明：
+- `BULK-*` 前綴是為了快速辨識與回收測試資料。
+- `--clear` 只會刪除 BULK 資料，不會動到一般 seed 資料（`admin@example.com` / `user@example.com` 與既有資產）。
 
 ### 重置資料庫（清空重來）
 

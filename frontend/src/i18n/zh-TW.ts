@@ -140,7 +140,6 @@ export default {
     photoCount: '{count} 張',
     statusMap: {
       PENDING: '待審核',
-      PENDING_SENIOR_APPROVAL: '待高階主管審核',
       IN_REPAIR: '維修中',
       COMPLETED: '維修完成',
       REJECTED: '已拒絕',
