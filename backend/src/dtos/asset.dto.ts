@@ -1,18 +1,24 @@
 import { z } from 'zod';
 import { mediaUrlArraySchema } from './media-url.schema';
 
+const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
+const assetDateInputSchema = z.union([
+  z.string().datetime({ offset: true }),
+  z.string().regex(dateOnlyPattern),
+]);
+
 export const CreateAssetDTO = z.object({
   name:          z.string().min(1),
   category:      z.string().min(1),
   model:         z.string().optional(),
   spec:          z.string().optional(),
   supplier:      z.string().optional(),
-  purchaseDate:  z.string().datetime().optional(),
+  purchaseDate:  assetDateInputSchema.optional(),
   purchaseCost:  z.number().nonnegative().optional(),
   location:      z.string().min(1),
   assignedDept:  z.string().optional(),
-  startDate:     z.string().datetime().optional(),
-  warrantyExpiry: z.string().datetime().optional(),
+  startDate:     assetDateInputSchema.optional(),
+  warrantyExpiry: assetDateInputSchema.optional(),
   holderId:      z.string().cuid().optional(),
   description:   z.string().optional(),
   imageUrls:     mediaUrlArraySchema.optional(),
@@ -24,12 +30,12 @@ export const UpdateAssetDTO = z.object({
   model:         z.string().optional(),
   spec:          z.string().optional(),
   supplier:      z.string().optional(),
-  purchaseDate:  z.string().datetime().optional(),
+  purchaseDate:  assetDateInputSchema.optional(),
   purchaseCost:  z.number().nonnegative().optional(),
   location:      z.string().min(1).optional(),
   assignedDept:  z.string().optional(),
-  startDate:     z.string().datetime().optional(),
-  warrantyExpiry: z.string().datetime().optional(),
+  startDate:     assetDateInputSchema.optional(),
+  warrantyExpiry: assetDateInputSchema.optional(),
   holderId:      z.string().cuid().nullable().optional(),
   status:        z.enum(['AVAILABLE', 'PENDING_REPAIR', 'IN_REPAIR', 'RETIRED']).optional(),
   description:   z.string().optional(),
