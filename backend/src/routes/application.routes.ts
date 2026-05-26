@@ -5,14 +5,17 @@ import { ApprovalRepository } from '@infrastructure/repositories/approval.reposi
 import { NotificationRepository } from '@infrastructure/repositories/notification.repository';
 import { UserRepository } from '@infrastructure/repositories/user.repository';
 import { ApplicationService } from '@services/application/application.service';
-import { NotificationService } from '@services/notification/notification.service';
+import { QueuedNotificationService } from '@services/notification/queued-notification.service';
 import { CreateApplicationDTO, ReviewApplicationDTO, RepairDetailsDTO, ApplicationQueryDTO, UpdateApplicationDTO } from '@dtos/application.dto';
 import { authMiddleware, requireRole } from '@middleware/auth.middleware';
 import { handleAppError } from '@domain/errors/app.errors';
 import { ERROR_CODES, HTTP_STATUS } from '@constants/error.constants';
 import { sendApiError } from '@domain/errors/error-response';
 
-const notificationService = new NotificationService(new NotificationRepository(), new UserRepository());
+const notificationService = new QueuedNotificationService(
+  new NotificationRepository(),
+  new UserRepository(),
+);
 const applicationService = new ApplicationService(
   new ApplicationRepository(),
   new AssetRepository(),

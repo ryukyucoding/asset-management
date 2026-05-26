@@ -11,6 +11,7 @@ TSMC 課程專案。支援資產借用、領用、審核流程，部署目標為
 | [docs/testing.md](docs/testing.md) | Testing Strategy（單元 / 整合 / E2E、覆蓋率門檻） |
 | [docs/sequence-diagram.md](docs/sequence-diagram.md) | Sequence Diagram（登入、維修申請流程、狀態機） |
 | [docs/er-diagram.md](docs/er-diagram.md) | ER Diagram（資料庫實體關係） |
+| [docs/redis.md](docs/redis.md) | Redis 架構位置、Key 命名空間、與 PostgreSQL 分工 |
 
 ---
 
@@ -185,7 +186,7 @@ chmod +x /tmp/cloud-sql-proxy
 ```bash
 # 3) 另開一個 terminal，指到 Cloud SQL 後灌資料
 cd /path/to/asset-management
-DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:6543/asset_management?schema=public" \
+DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:6543/asset_management?schema=public&connection_limit=5&pool_timeout=10" \
   pnpm --filter asset-management-backend exec tsx prisma/seed-bulk.ts --assets 1000 --applications 100
 ```
 
@@ -199,7 +200,7 @@ psql "postgresql://db_user:db_password@127.0.0.1:6543/asset_management" \
 ```bash
 # 5) 清除 BULK 測試資料（只刪 BULK-*）
 cd backend
-DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:6543/asset_management?schema=public" \
+DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:6543/asset_management?schema=public&connection_limit=5&pool_timeout=10" \
   pnpm exec tsx prisma/seed-bulk.ts --clear
 ```
 
@@ -434,9 +435,24 @@ export REDIS_HOST="10.x.x.x"
 export REDIS_PORT="6379"
 export VPC_CONNECTOR="asset-run-connector"
 export VPC_EGRESS="private-ranges-only"
-export DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:5432/asset_management?schema=public"
+export DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:5432/asset_management?schema=public&connection_limit=5&pool_timeout=10"
 bash scripts/gcp/deploy-backend-cloudrun.sh
 ```
+
+**`DATABASE_URL` 連線池（建議生產環境必帶）**
+
+| 參數 | 值 | 說明 |
+|------|-----|------|
+| `connection_limit` | `5` | 每個 Cloud Run instance 最多 5 條 DB 連線；`max-instances=20` 時總上限約 100 |
+| `pool_timeout` | `10` | 等待連線逾時（秒） |
+
+Cloud SQL Connector 範例（在既有 query string 後追加）：
+
+```text
+postgresql://USER:PASS@localhost/asset_management?host=/cloudsql/PROJECT:REGION:INSTANCE&schema=public&connection_limit=5&pool_timeout=10
+```
+
+GitHub Secret `DATABASE_URL` 與 Cloud Run 環境變數需一致，否則下次 CI deploy 會覆蓋。
 
 ```bash
 # 4) 部署 frontend

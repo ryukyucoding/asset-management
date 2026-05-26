@@ -16,9 +16,9 @@ sequenceDiagram
     DB-->>BE: User record (passwordHash)
     BE->>BE: bcrypt.verify(password, hash)
     alt credentials valid
-        BE->>BE: signAccessToken() [15m]
-        BE->>BE: signRefreshToken() [7d]
-        BE->>Cache: SET refreshToken (TTL 7d)
+        BE->>BE: signAccessToken() [15m] + jti
+        BE->>BE: signRefreshToken() [7d] + jti
+        BE->>Cache: SET refresh:{userId}:{jti} (TTL 7d)
         BE-->>FE: 200 { accessToken, refreshToken, user }
         FE->>FE: Pinia store.login()
         FE-->>U: Redirect to /assets

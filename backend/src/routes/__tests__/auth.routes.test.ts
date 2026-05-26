@@ -21,8 +21,29 @@ vi.mock('@infrastructure/repositories/user.repository', () => ({
   })),
 }));
 
-vi.mock('@infrastructure/cache/redis.client', () => ({
-  incrementWithTtl: mocks.incrementWithTtl,
+vi.mock('@infrastructure/cache/redis.client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@infrastructure/cache/redis.client')>();
+  return {
+    ...actual,
+    incrementWithTtl: mocks.incrementWithTtl,
+    getString: vi.fn().mockResolvedValue(null),
+    setString: vi.fn().mockResolvedValue(undefined),
+    deleteKey: vi.fn().mockResolvedValue(undefined),
+    deleteByPattern: vi.fn().mockResolvedValue(undefined),
+    pingRedis: vi.fn().mockResolvedValue(true),
+    closeRedisClient: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+vi.mock('@infrastructure/cache/redis-token.store', () => ({
+  RedisTokenStore: vi.fn().mockImplementation(() => ({
+    storeRefreshToken: vi.fn().mockResolvedValue(undefined),
+    hasRefreshToken: vi.fn().mockResolvedValue(true),
+    revokeRefreshToken: vi.fn().mockResolvedValue(undefined),
+    revokeAllRefreshTokens: vi.fn().mockResolvedValue(undefined),
+    denyAccessToken: vi.fn().mockResolvedValue(undefined),
+    isAccessTokenDenied: vi.fn().mockResolvedValue(false),
+  })),
 }));
 
 import { authRoutes } from '../auth.routes';

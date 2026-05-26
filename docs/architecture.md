@@ -25,11 +25,12 @@ graph TB
     subgraph Infra["Infrastructure Layer"]
         PrismaORM["Prisma ORM"]
         Repos["Repositories\nUser · Asset\nApplication · Notification"]
+        RedisAdapters["Redis Adapters\nTokenStore · Cache · Queue"]
     end
 
     subgraph DataLayer["Data Layer — GCP"]
-        PG["Cloud SQL\n(PostgreSQL 16)"]
-        Redis["Memorystore\n(Redis 7)\nSession · Cache"]
+        PG["Cloud SQL\n(PostgreSQL 16)\nSoT"]
+        Redis["Memorystore\n(Redis 7)\nSession · Cache · BullMQ"]
     end
 
     subgraph Observability["Observability"]
@@ -50,7 +51,11 @@ graph TB
     NotifSvc --> Repos
     Repos --> PrismaORM
     PrismaORM --> PG
-    BE --> Redis
+    Auth --> RedisAdapters
+    AssetSvc --> RedisAdapters
+    AppSvc --> RedisAdapters
+    BE --> RedisAdapters
+    RedisAdapters --> Redis
     BE --> Logs
     BE --> Monitor
 ```
@@ -66,7 +71,7 @@ graph TB
 | Application Service | Prisma | Repair request lifecycle, approval workflow |
 | Notification Service | Prisma | In-app notifications per application status change |
 | Cloud SQL (PostgreSQL) | PostgreSQL 16 | Persistent relational data |
-| Memorystore (Redis) | Redis 7 | Token cache, rate-limit counters |
+| Memorystore (Redis) | Redis 7 | Refresh session, token denylist, rate-limit, asset list cache, serial INCR, BullMQ (see [docs/redis.md](redis.md)) |
 | Cloud Logging / Monitoring | GCP native | Structured logs, uptime alerts |
 
 ## Deployment Strategy

@@ -180,7 +180,9 @@ sequenceDiagram
 | Services — NotificationService | ✅ 已實作 |
 | Infrastructure — Prisma Repository | ✅ 已實作 |
 | Infrastructure — GCS Storage | ✅ 已實作（含 Local 開發替代） |
-| Infrastructure — RedisTokenStore | ⬜ 規劃中（JWT 目前用 env secret） |
+| Infrastructure — RedisTokenStore | ✅ 已實作（Refresh session、登出黑名單；見 [docs/redis.md](redis.md)） |
+| Infrastructure — AssetListCache / SerialCounter | ✅ 已實作 |
+| Infrastructure — BullMQ NotificationQueue | ✅ 已實作 |
 
 ---
 

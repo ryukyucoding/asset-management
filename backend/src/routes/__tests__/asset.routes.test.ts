@@ -34,6 +34,18 @@ vi.mock('@infrastructure/database/prisma.client', () => ({
   },
 }));
 
+vi.mock('@infrastructure/cache/serial-counter', () => ({
+  nextSerialNumber: vi.fn().mockResolvedValue(null),
+  formatSerialNo: (prefix: string, num: number) =>
+    `${prefix}-${String(num).padStart(8, '0')}`,
+}));
+
+vi.mock('@infrastructure/cache/asset-list.cache', () => ({
+  getCachedAssetList: vi.fn().mockResolvedValue(null),
+  setCachedAssetList: vi.fn().mockResolvedValue(undefined),
+  invalidateAssetListCache: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { assetRoutes } from '../asset.routes';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

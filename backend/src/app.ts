@@ -12,6 +12,7 @@ import { ERROR_CODES, HTTP_STATUS } from './constants/error.constants';
 import { sendApiError } from './domain/errors/error-response';
 import { prisma } from './infrastructure/database/prisma.client';
 import { pingRedis, closeRedisClient } from './infrastructure/cache/redis.client';
+import { startNotificationWorker, closeNotificationQueue } from './infrastructure/queue/notification.queue';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -74,7 +75,11 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(applicationRoutes);
   await fastify.register(notificationRoutes);
   await fastify.register(uploadRoutes);
+
+  startNotificationWorker();
+
   fastify.addHook('onClose', async () => {
+    await closeNotificationQueue();
     await closeRedisClient();
   });
 

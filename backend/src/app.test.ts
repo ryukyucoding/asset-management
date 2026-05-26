@@ -25,9 +25,26 @@ vi.mock('@infrastructure/database/prisma.client', () => ({
   prisma: prismaMock,
 }));
 
-vi.mock('./infrastructure/cache/redis.client', () => ({
-  pingRedis: redisMock.pingRedis,
-  closeRedisClient: redisMock.closeRedisClient,
+vi.mock('./infrastructure/cache/redis.client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./infrastructure/cache/redis.client')>();
+  return {
+    ...actual,
+    pingRedis: redisMock.pingRedis,
+    closeRedisClient: redisMock.closeRedisClient,
+    getString: vi.fn().mockResolvedValue(null),
+    setString: vi.fn().mockResolvedValue(undefined),
+    deleteKey: vi.fn().mockResolvedValue(undefined),
+    deleteByPattern: vi.fn().mockResolvedValue(undefined),
+    increment: vi.fn().mockResolvedValue(1),
+    incrementWithTtl: vi.fn().mockResolvedValue(1),
+  };
+});
+
+vi.mock('./infrastructure/queue/notification.queue', () => ({
+  startNotificationWorker: vi.fn().mockReturnValue(null),
+  closeNotificationQueue: vi.fn().mockResolvedValue(undefined),
+  enqueueNotification: vi.fn().mockResolvedValue(undefined),
+  getNotificationQueue: vi.fn(),
 }));
 
 describe('GET /health', () => {

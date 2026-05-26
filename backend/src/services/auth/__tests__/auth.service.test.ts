@@ -1,7 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AuthService, hashPassword, verifyPassword, signAccessToken, verifyAccessToken } from '../auth.service';
+import {
+  AuthService,
+  hashPassword,
+  verifyPassword,
+  signAccessToken,
+  verifyAccessToken,
+  signRefreshToken,
+} from '../auth.service';
 import type { IUserRepository } from '@domain/repositories/user.repository.interface';
+import type { ITokenStore } from '@domain/repositories/token-store.interface';
 import type { UserEntity } from '@domain/entities/user.entity';
+
+const mockTokenStore: ITokenStore = {
+  storeRefreshToken: vi.fn(),
+  hasRefreshToken: vi.fn().mockResolvedValue(true),
+  revokeRefreshToken: vi.fn(),
+  revokeAllRefreshTokens: vi.fn(),
+  denyAccessToken: vi.fn(),
+  isAccessTokenDenied: vi.fn().mockResolvedValue(false),
+};
 
 const mockUser: UserEntity = {
   id: 'user-1',
@@ -59,7 +76,7 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new AuthService(mockRepo);
+    service = new AuthService(mockRepo, mockTokenStore);
   });
 
   describe('login', () => {
@@ -82,6 +99,37 @@ describe('AuthService', () => {
     it('throws on wrong password', async () => {
       vi.mocked(mockRepo.findByEmail).mockResolvedValue(mockUser);
       await expect(service.login('test@example.com', 'wrongpass')).rejects.toThrow('Invalid credentials');
+    });
+
+    it('stores refresh token in token store on success', async () => {
+      vi.mocked(mockRepo.findByEmail).mockResolvedValue(mockUser);
+      await service.login('test@example.com', 'password123');
+      expect(mockTokenStore.storeRefreshToken).toHaveBeenCalled();
+    });
+  });
+
+  describe('refresh', () => {
+    it('returns new access token when refresh session is valid', async () => {
+      const refreshToken = signRefreshToken({ userId: 'user-1' });
+      vi.mocked(mockRepo.findById).mockResolvedValue(mockUser);
+      vi.mocked(mockTokenStore.hasRefreshToken).mockResolvedValue(true);
+
+      const result = await service.refresh(refreshToken);
+      expect(result.accessToken).toBeDefined();
+    });
+
+    it('throws when refresh session is revoked', async () => {
+      const refreshToken = signRefreshToken({ userId: 'user-1' });
+      vi.mocked(mockTokenStore.hasRefreshToken).mockResolvedValue(false);
+      await expect(service.refresh(refreshToken)).rejects.toThrow('Invalid refresh token');
+    });
+  });
+
+  describe('logout', () => {
+    it('denies access token and revokes refresh sessions', async () => {
+      await service.logout('user-1', 'access-jti');
+      expect(mockTokenStore.denyAccessToken).toHaveBeenCalledWith('access-jti', expect.any(Number));
+      expect(mockTokenStore.revokeAllRefreshTokens).toHaveBeenCalledWith('user-1');
     });
   });
 

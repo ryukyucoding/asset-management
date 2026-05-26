@@ -1,20 +1,21 @@
 import type { FastifyInstance } from 'fastify';
 import { AuthService } from '@services/auth/auth.service';
 import { UserRepository } from '@infrastructure/repositories/user.repository';
+import { RedisTokenStore } from '@infrastructure/cache/redis-token.store';
 import { LoginDTO, RegisterDTO } from '@dtos/auth.dto';
 import { authMiddleware, requireRole } from '@middleware/auth.middleware';
-import { verifyRefreshToken, signAccessToken } from '@services/auth/auth.service';
 import { ERROR_CODES, HTTP_STATUS } from '@constants/error.constants';
 import { sendApiError } from '@domain/errors/error-response';
 import { incrementWithTtl } from '@infrastructure/cache/redis.client';
+import { redisKeys } from '@infrastructure/cache/redis.keys';
 
 const userRepo = new UserRepository();
-const authService = new AuthService(userRepo);
+const authService = new AuthService(userRepo, new RedisTokenStore());
 const LOGIN_RATE_LIMIT_WINDOW_SECONDS = 60;
 const LOGIN_RATE_LIMIT_MAX_REQUESTS = 10;
 
 async function isLoginRateLimited(ip: string, fastify: FastifyInstance): Promise<boolean> {
-  const key = `rate-limit:auth-login:${ip}`;
+  const key = redisKeys.rateLimitAuthLogin(ip);
   try {
     const attempts = await incrementWithTtl(key, LOGIN_RATE_LIMIT_WINDOW_SECONDS);
     return attempts > LOGIN_RATE_LIMIT_MAX_REQUESTS;
@@ -94,9 +95,9 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       );
     }
 
-    let payload: { userId: string };
     try {
-      payload = verifyRefreshToken(refreshToken);
+      const result = await authService.refresh(refreshToken);
+      return reply.send(result);
     } catch {
       return sendApiError(
         reply,
@@ -105,17 +106,10 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
         'Invalid refresh token',
       );
     }
-
-    const user = await userRepo.findById(payload.userId);
-    if (!user) {
-      return sendApiError(reply, ERROR_CODES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED, 'Unauthorized');
-    }
-
-    const accessToken = signAccessToken({ userId: user.id, role: user.role });
-    return reply.send({ accessToken });
   });
 
-  fastify.post('/auth/logout', { preHandler: [authMiddleware] }, async (_request, reply) => {
+  fastify.post('/auth/logout', { preHandler: [authMiddleware] }, async (request, reply) => {
+    await authService.logout(request.user.userId, request.user.jti);
     return reply.status(204).send();
   });
 

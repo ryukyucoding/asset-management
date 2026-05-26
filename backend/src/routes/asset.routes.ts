@@ -1,10 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { AssetRepository } from '@infrastructure/repositories/asset.repository';
+import { CachedAssetRepository } from '@infrastructure/repositories/cached-asset.repository';
 import { CreateAssetDTO, UpdateAssetDTO, AssetQueryDTO } from '@dtos/asset.dto';
 import { authMiddleware, requireRole } from '@middleware/auth.middleware';
 import { prisma } from '@infrastructure/database/prisma.client';
 import { ERROR_CODES, HTTP_STATUS } from '@constants/error.constants';
 import { sendApiError } from '@domain/errors/error-response';
+import { nextSerialNumber, formatSerialNo } from '@infrastructure/cache/serial-counter';
 
 const CATEGORY_PREFIX: Record<string, string> = {
   'IT設備':   'IT',
@@ -15,10 +17,12 @@ const CATEGORY_PREFIX: Record<string, string> = {
   '其他':     'GEN',
 };
 
-async function generateSerialNo(category: string): Promise<string> {
-  const prefix = CATEGORY_PREFIX[category]
+function resolvePrefix(category: string): string {
+  return CATEGORY_PREFIX[category]
     ?? category.slice(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, 'X');
+}
 
+async function generateSerialNoFromDb(prefix: string): Promise<string> {
   const existing = await prisma.asset.findMany({
     where:   { serialNo: { startsWith: `${prefix}-` } },
     select:  { serialNo: true },
@@ -30,10 +34,19 @@ async function generateSerialNo(category: string): Promise<string> {
     if (!isNaN(num) && num > maxNum) maxNum = num;
   }
 
-  return `${prefix}-${String(maxNum + 1).padStart(8, '0')}`;
+  return formatSerialNo(prefix, maxNum + 1);
 }
 
-const assetRepo = new AssetRepository();
+async function generateSerialNo(category: string): Promise<string> {
+  const prefix = resolvePrefix(category);
+  const next = await nextSerialNumber(prefix);
+  if (next !== null) {
+    return formatSerialNo(prefix, next);
+  }
+  return generateSerialNoFromDb(prefix);
+}
+
+const assetRepo = new CachedAssetRepository(new AssetRepository());
 
 export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/assets', { preHandler: [authMiddleware] }, async (request, reply) => {

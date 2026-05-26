@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { verifyAccessToken } from '@services/auth/auth.service';
+import { verifyAccessToken, isAccessTokenDenied } from '@services/auth/auth.service';
 import type { UserRole } from '@domain/entities/user.entity';
 import { ERROR_CODES, HTTP_STATUS } from '@constants/error.constants';
 import { sendApiError } from '@domain/errors/error-response';
@@ -7,6 +7,7 @@ import { sendApiError } from '@domain/errors/error-response';
 export interface JwtPayload {
   userId: string;
   role: UserRole;
+  jti: string;
 }
 
 declare module 'fastify' {
@@ -24,7 +25,18 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
 
   try {
     const token = authHeader.slice(7);
-    request.user = verifyAccessToken(token);
+    const payload = verifyAccessToken(token);
+
+    if (payload.jti && (await isAccessTokenDenied(payload.jti))) {
+      sendApiError(reply, ERROR_CODES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED, 'Token has been revoked');
+      return;
+    }
+
+    request.user = {
+      userId: payload.userId,
+      role: payload.role,
+      jti: payload.jti,
+    };
   } catch {
     sendApiError(reply, ERROR_CODES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED, 'Invalid or expired token');
     return;
