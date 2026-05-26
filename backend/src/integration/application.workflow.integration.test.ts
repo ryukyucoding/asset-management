@@ -49,20 +49,6 @@ async function seedBasicUsers() {
   return { user, admin };
 }
 
-async function seedSeniorAdmin() {
-  return prisma.user.upsert({
-    where: { email: `${TEST_PREFIX}-senior@example.com` },
-    update: {},
-    create: {
-      name: 'Integration Senior Admin',
-      email: `${TEST_PREFIX}-senior@example.com`,
-      passwordHash: hashPassword('Senior1234'),
-      role: 'SENIOR_ADMIN',
-      department: 'IT',
-    },
-  });
-}
-
 async function seedAsset(category = 'IT設備') {
   return prisma.asset.create({
     data: {
@@ -198,14 +184,12 @@ describe('Application workflow (integration)', () => {
     expect(assetFinal?.status).toBe('AVAILABLE');
   });
 
-  it('High-value asset requires ADMIN then SENIOR_ADMIN approval', async () => {
+  it('High-value asset now uses single ADMIN approval', async () => {
     const { user, admin } = await seedBasicUsers();
-    const seniorAdmin = await seedSeniorAdmin();
     const asset = await seedAsset('HIGH_VALUE');
 
     const userToken = await login(app, user.email, 'User1234');
     const adminToken = await login(app, admin.email, 'Admin1234');
-    const seniorToken = await login(app, seniorAdmin.email, 'Senior1234');
 
     const createRes = await app.inject({
       method: 'POST',
@@ -225,19 +209,7 @@ describe('Application workflow (integration)', () => {
       payload: { action: 'APPROVED' },
     });
     expect(adminApproveRes.statusCode).toBe(200);
-    expect(adminApproveRes.json().status).toBe('PENDING_SENIOR_APPROVAL');
-
-    const assetStillPending = await prisma.asset.findUnique({ where: { id: asset.id } });
-    expect(assetStillPending?.status).toBe('PENDING_REPAIR');
-
-    const seniorApproveRes = await app.inject({
-      method: 'PATCH',
-      url: `/applications/${applicationId}/approve`,
-      headers: { authorization: `Bearer ${seniorToken}` },
-      payload: { action: 'APPROVED' },
-    });
-    expect(seniorApproveRes.statusCode).toBe(200);
-    expect(seniorApproveRes.json().status).toBe('IN_REPAIR');
+    expect(adminApproveRes.json().status).toBe('IN_REPAIR');
 
     const assetInRepair = await prisma.asset.findUnique({ where: { id: asset.id } });
     expect(assetInRepair?.status).toBe('IN_REPAIR');
@@ -246,8 +218,7 @@ describe('Application workflow (integration)', () => {
       where: { applicationId },
       orderBy: { step: 'asc' },
     });
-    expect(approvalSteps).toHaveLength(2);
+    expect(approvalSteps).toHaveLength(1);
     expect(approvalSteps[0]?.step).toBe(1);
-    expect(approvalSteps[1]?.step).toBe(2);
   });
 });
