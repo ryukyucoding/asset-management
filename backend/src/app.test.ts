@@ -12,6 +12,11 @@ const prismaMock = vi.hoisted(() => ({
   $disconnect: vi.fn(),
 }));
 
+const redisMock = vi.hoisted(() => ({
+  pingRedis: vi.fn(),
+  closeRedisClient: vi.fn(),
+}));
+
 vi.mock('./infrastructure/database/prisma.client', () => ({
   prisma: prismaMock,
 }));
@@ -20,11 +25,18 @@ vi.mock('@infrastructure/database/prisma.client', () => ({
   prisma: prismaMock,
 }));
 
+vi.mock('./infrastructure/cache/redis.client', () => ({
+  pingRedis: redisMock.pingRedis,
+  closeRedisClient: redisMock.closeRedisClient,
+}));
+
 describe('GET /health', () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    redisMock.pingRedis.mockResolvedValue(true);
+    redisMock.closeRedisClient.mockResolvedValue(undefined);
     app = await buildApp();
     await app.ready();
   });
@@ -39,15 +51,16 @@ describe('GET /health', () => {
     const res = await app.inject({ method: 'GET', url: '/health' });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ status: 'ok', db: 'connected' });
+    expect(res.json()).toMatchObject({ status: 'ok', db: 'connected', redis: 'connected' });
   });
 
   it('503 — db disconnected', async () => {
+    redisMock.pingRedis.mockResolvedValue(false);
     prismaMock.$queryRaw.mockRejectedValue(new Error('connection refused'));
 
     const res = await app.inject({ method: 'GET', url: '/health' });
 
     expect(res.statusCode).toBe(503);
-    expect(res.json()).toMatchObject({ status: 'degraded', db: 'disconnected' });
+    expect(res.json()).toMatchObject({ status: 'degraded', db: 'disconnected', redis: 'disconnected' });
   });
 });

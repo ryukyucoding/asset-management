@@ -38,6 +38,10 @@ export async function incrementWithTtl(key: string, ttlSeconds: number): Promise
 
 export async function closeRedisClient(): Promise<void> {
   if (!redisClient) return;
-  await redisClient.quit();
+  try {
+    await redisClient.quit();
+  } catch {
+    // Ignore shutdown errors when the client was never connected.
+  }
   redisClient = null;
 }
