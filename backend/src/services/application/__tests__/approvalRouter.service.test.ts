@@ -46,7 +46,7 @@ function makeApp(asset?: AssetEntity): ApplicationEntity {
 }
 
 describe('resolveApprovalSteps', () => {
-  describe('standard assets — single ADMIN step', () => {
+  describe('all assets — single ADMIN step', () => {
     it('returns one ADMIN step for IT設備', () => {
       const steps = resolveApprovalSteps(makeApp(makeAsset('IT設備')));
       expect(steps).toHaveLength(1);
@@ -75,23 +75,22 @@ describe('resolveApprovalSteps', () => {
     });
   });
 
-  describe('high-value assets — two steps (ADMIN + SENIOR_ADMIN)', () => {
-    it.each(['HIGH_VALUE', 'SERVER', 'EQUIPMENT'])(
-      'adds SENIOR_ADMIN second step for category "%s"',
+  describe('high-value assets', () => {
+    it.each(['HIGH_VALUE'])(
+      'returns one ADMIN step for category "%s"',
       (category) => {
         const steps = resolveApprovalSteps(makeApp(makeAsset(category)));
-        expect(steps).toHaveLength(2);
+        expect(steps).toHaveLength(1);
         expect(steps[0]).toEqual({ role: 'ADMIN', step: 1 });
-        expect(steps[1]).toEqual({ role: 'SENIOR_ADMIN', step: 2 });
       },
     );
   });
 
-  describe('step ordering and immutability', () => {
+  describe('step shape and immutability', () => {
     it('always starts with ADMIN at step 1', () => {
-      const steps = resolveApprovalSteps(makeApp(makeAsset('SERVER')));
+      const steps = resolveApprovalSteps(makeApp(makeAsset('HIGH_VALUE')));
       expect(steps[0].step).toBe(1);
-      expect(steps[1].step).toBe(2);
+      expect(steps).toHaveLength(1);
     });
 
     it('returns a new array on every call (no shared state)', () => {

@@ -188,18 +188,19 @@ describe('ApplicationService', () => {
       expect(mockNotificationService.notifyApplicationApproved).toHaveBeenCalledWith('user-1', 'MacBook Pro');
     });
 
-    it('ADMIN approves high-value asset → PENDING_SENIOR_APPROVAL', async () => {
+    it('ADMIN approves high-value asset → IN_REPAIR', async () => {
       vi.mocked(mockApplicationRepo.findById).mockResolvedValue(makeApp({
         status: 'PENDING',
         asset: makeAsset({ category: 'HIGH_VALUE' }),
       }));
-      vi.mocked(mockApplicationRepo.update).mockResolvedValue(makeApp({ status: 'PENDING_SENIOR_APPROVAL' }));
+      vi.mocked(mockApplicationRepo.update).mockResolvedValue(makeApp({ status: 'IN_REPAIR' }));
 
-      await service.approve(APP_ID, { userId: 'admin-1', role: 'ADMIN' }, { action: 'APPROVED' });
+      const result = await service.approve(APP_ID, { userId: 'admin-1', role: 'ADMIN' }, { action: 'APPROVED' });
 
-      expect(mockApplicationRepo.update).toHaveBeenCalledWith(APP_ID, { status: 'PENDING_SENIOR_APPROVAL' });
-      expect(mockNotificationService.notifyPendingSeniorApproval).toHaveBeenCalledWith('MacBook Pro');
-      expect(mockAssetRepo.update).not.toHaveBeenCalled();
+      expect(result.status).toBe('IN_REPAIR');
+      expect(mockApplicationRepo.update).toHaveBeenCalledWith(APP_ID, { status: 'IN_REPAIR' });
+      expect(mockNotificationService.notifyApplicationApproved).toHaveBeenCalledWith('user-1', 'MacBook Pro');
+      expect(mockAssetRepo.update).toHaveBeenCalledWith(ASSET_ID, { status: 'IN_REPAIR' });
     });
 
     it('ADMIN rejects → REJECTED and asset restored to AVAILABLE', async () => {

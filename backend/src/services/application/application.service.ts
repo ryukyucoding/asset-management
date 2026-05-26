@@ -94,9 +94,9 @@ export class ApplicationService {
       throw new AppError('Application is not pending review', 'CONFLICT');
     }
 
+    // 統一為單步審批，舊狀態 PENDING_SENIOR_APPROVAL 也收斂到同一關。
     const steps = resolveApprovalSteps(application);
-    const currentStepIndex = application.status === 'PENDING' ? 0 : 1;
-    const currentStep = steps[currentStepIndex];
+    const currentStep = steps[0];
 
     if (!currentStep) {
       throw new AppError('No approval step found for current status', 'CONFLICT');
@@ -121,7 +121,7 @@ export class ApplicationService {
       updated = await this.applicationRepo.update(id, { status: 'REJECTED' });
       await this.assetRepo.update(application.assetId, { status: 'AVAILABLE' });
       await this.notificationService.notifyApplicationRejected(application.userId, assetName, data.comment);
-    } else if (currentStepIndex + 1 < steps.length) {
+    } else if (steps.length > 1) {
       updated = await this.applicationRepo.update(id, { status: 'PENDING_SENIOR_APPROVAL' });
       await this.notificationService.notifyPendingSeniorApproval(assetName);
     } else {
