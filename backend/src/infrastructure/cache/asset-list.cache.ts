@@ -3,6 +3,7 @@ import type { AssetSearchParams, PaginatedResult } from '@domain/repositories/as
 import type { AssetEntity } from '@domain/entities/asset.entity';
 import { getString, setString, deleteByPattern } from './redis.client';
 import { redisKeys } from './redis.keys';
+import { recordCacheHit, recordCacheMiss } from './cache-metrics';
 
 const ASSET_LIST_CACHE_TTL_SECONDS = 60;
 
@@ -16,9 +17,14 @@ export async function getCachedAssetList(
 ): Promise<PaginatedResult<AssetEntity> | null> {
   try {
     const raw = await getString(redisKeys.cacheAssets(hashQuery(params)));
-    if (!raw) return null;
+    if (!raw) {
+      recordCacheMiss('assets');
+      return null;
+    }
+    recordCacheHit('assets');
     return JSON.parse(raw) as PaginatedResult<AssetEntity>;
   } catch {
+    recordCacheMiss('assets');
     return null;
   }
 }

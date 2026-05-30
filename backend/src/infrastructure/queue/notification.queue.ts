@@ -1,6 +1,7 @@
 import { Queue, Worker, type Job } from 'bullmq';
 import { NotificationRepository } from '@infrastructure/repositories/notification.repository';
 import { UserRepository } from '@infrastructure/repositories/user.repository';
+import { CachedUserRepository } from '@infrastructure/repositories/cached-user.repository';
 import { NotificationService } from '@services/notification/notification.service';
 
 export const NOTIFICATION_QUEUE_NAME = 'notification-jobs';
@@ -40,7 +41,10 @@ export function getNotificationQueue(): Queue<NotificationJobPayload> {
 }
 
 async function processNotificationJob(job: Job<NotificationJobPayload>): Promise<void> {
-  const service = new NotificationService(new NotificationRepository(), new UserRepository());
+  const service = new NotificationService(
+    new NotificationRepository(),
+    new CachedUserRepository(new UserRepository()),
+  );
   const { data } = job;
 
   switch (data.type) {

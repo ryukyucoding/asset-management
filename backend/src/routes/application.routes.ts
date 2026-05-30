@@ -1,24 +1,27 @@
 import type { FastifyInstance } from 'fastify';
 import { ApplicationRepository } from '@infrastructure/repositories/application.repository';
 import { AssetRepository } from '@infrastructure/repositories/asset.repository';
+import { CachedAssetRepository } from '@infrastructure/repositories/cached-asset.repository';
 import { ApprovalRepository } from '@infrastructure/repositories/approval.repository';
 import { NotificationRepository } from '@infrastructure/repositories/notification.repository';
 import { UserRepository } from '@infrastructure/repositories/user.repository';
+import { CachedUserRepository } from '@infrastructure/repositories/cached-user.repository';
 import { ApplicationService } from '@services/application/application.service';
 import { QueuedNotificationService } from '@services/notification/queued-notification.service';
 import { CreateApplicationDTO, ReviewApplicationDTO, RepairDetailsDTO, ApplicationQueryDTO, UpdateApplicationDTO } from '@dtos/application.dto';
 import { authMiddleware, requireRole } from '@middleware/auth.middleware';
+import { idempotencyMiddleware } from '@middleware/idempotency.middleware';
 import { handleAppError } from '@domain/errors/app.errors';
 import { ERROR_CODES, HTTP_STATUS } from '@constants/error.constants';
 import { sendApiError } from '@domain/errors/error-response';
 
 const notificationService = new QueuedNotificationService(
   new NotificationRepository(),
-  new UserRepository(),
+  new CachedUserRepository(new UserRepository()),
 );
 const applicationService = new ApplicationService(
   new ApplicationRepository(),
-  new AssetRepository(),
+  new CachedAssetRepository(new AssetRepository()),
   new ApprovalRepository(),
   notificationService,
 );
@@ -59,7 +62,7 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
     }
   });
 
-  fastify.post('/applications', { preHandler: [authMiddleware] }, async (request, reply) => {
+  fastify.post('/applications', { preHandler: [authMiddleware, idempotencyMiddleware] }, async (request, reply) => {
     const body = CreateApplicationDTO.safeParse(request.body);
     if (!body.success) {
       return sendApiError(
@@ -105,7 +108,7 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
   });
 
   // ─── 審核（目前統一為 ADMIN 單步審批）────────────────────────
-  fastify.patch('/applications/:id/approve', { preHandler: [authMiddleware, requireRole('ADMIN')] }, async (request, reply) => {
+  fastify.patch('/applications/:id/approve', { preHandler: [authMiddleware, requireRole('ADMIN'), idempotencyMiddleware] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = ReviewApplicationDTO.safeParse(request.body);
     if (!body.success) {
@@ -151,7 +154,7 @@ export async function applicationRoutes(fastify: FastifyInstance): Promise<void>
     }
   });
 
-  fastify.patch('/applications/:id/complete', { preHandler: [authMiddleware, requireRole('ADMIN')] }, async (request, reply) => {
+  fastify.patch('/applications/:id/complete', { preHandler: [authMiddleware, requireRole('ADMIN'), idempotencyMiddleware] }, async (request, reply) => {
     const { id } = request.params as { id: string };
 
     try {

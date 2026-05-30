@@ -13,7 +13,7 @@ export class UserRepository implements IUserRepository {
 
   async findIdsByRole(role: UserRole): Promise<string[]> {
     const users = await prisma.user.findMany({ where: { role }, select: { id: true } });
-    return users.map((u) => u.id);
+    return users.map((u: { id: string }) => u.id);
   }
 
   async create(data: { name: string; email: string; passwordHash: string; department?: string }): Promise<UserEntity> {

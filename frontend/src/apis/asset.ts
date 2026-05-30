@@ -12,8 +12,15 @@ export interface AssetQuery {
   limit?: number
 }
 
+export interface AssetStats {
+  available: number
+  pendingRepair: number
+  inRepair: number
+}
+
 export const assetApi = {
   list: (query: AssetQuery = {}) => http.get('/assets', { params: query }),
+  stats: () => http.get<AssetStats>('/assets/stats'),
   get: (id: string) => http.get(`/assets/${id}`),
   create: (data: unknown) => http.post('/assets', data),
   update: (id: string, data: unknown) => http.patch(`/assets/${id}`, data),

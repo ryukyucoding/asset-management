@@ -11,4 +11,5 @@ export interface IUserRepository {
     department?: string;
   }): Promise<UserEntity>;
   update(id: string, data: Partial<Pick<UserEntity, 'name' | 'department' | 'role'>>): Promise<UserEntity>;
+  findAll(): Promise<Omit<UserEntity, 'passwordHash'>[]>;
 }

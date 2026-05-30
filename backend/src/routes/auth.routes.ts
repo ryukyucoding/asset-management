@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { AuthService } from '@services/auth/auth.service';
 import { UserRepository } from '@infrastructure/repositories/user.repository';
+import { CachedUserRepository } from '@infrastructure/repositories/cached-user.repository';
 import { RedisTokenStore } from '@infrastructure/cache/redis-token.store';
 import { LoginDTO, RegisterDTO } from '@dtos/auth.dto';
 import { authMiddleware, requireRole } from '@middleware/auth.middleware';
@@ -10,7 +11,8 @@ import { incrementWithTtl } from '@infrastructure/cache/redis.client';
 import { redisKeys } from '@infrastructure/cache/redis.keys';
 
 const userRepo = new UserRepository();
-const authService = new AuthService(userRepo, new RedisTokenStore());
+const cachedUserRepo = new CachedUserRepository(userRepo);
+const authService = new AuthService(cachedUserRepo, new RedisTokenStore());
 const LOGIN_RATE_LIMIT_WINDOW_SECONDS = 60;
 const LOGIN_RATE_LIMIT_MAX_REQUESTS = 10;
 
@@ -114,7 +116,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   fastify.get('/users', { preHandler: [authMiddleware, requireRole('ADMIN')] }, async (_request, reply) => {
-    const users = await userRepo.findAll();
+    const users = await cachedUserRepo.findAll();
     return reply.send(users);
   });
 }

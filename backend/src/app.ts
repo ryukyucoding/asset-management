@@ -8,7 +8,10 @@ import { assetRoutes } from './routes/asset.routes';
 import { applicationRoutes } from './routes/application.routes';
 import { notificationRoutes } from './routes/notification.routes';
 import { uploadRoutes } from './routes/upload.routes';
-import { adminRoutes } from './routes/admin.routes';
+import { adminRedisRoutes } from './routes/admin-redis.routes';
+import { adminQueueRoutes } from './routes/admin-queue.routes';
+import { idempotencyOnSend } from './middleware/idempotency.middleware';
+import { warmCache } from './infrastructure/cache/cache-warmer';
 import { ERROR_CODES, HTTP_STATUS } from './constants/error.constants';
 import { sendApiError } from './domain/errors/error-response';
 import { prisma } from './infrastructure/database/prisma.client';
@@ -71,14 +74,20 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
   });
 
+  fastify.addHook('onSend', idempotencyOnSend);
+
   await fastify.register(authRoutes);
   await fastify.register(assetRoutes);
   await fastify.register(applicationRoutes);
   await fastify.register(notificationRoutes);
   await fastify.register(uploadRoutes);
-  await fastify.register(adminRoutes);
+  await fastify.register(adminRedisRoutes);
+  if (process.env.NODE_ENV !== 'test') {
+    await fastify.register(adminQueueRoutes);
+  }
 
   startNotificationWorker();
+  warmCache();
 
   fastify.addHook('onClose', async () => {
     await closeNotificationQueue();

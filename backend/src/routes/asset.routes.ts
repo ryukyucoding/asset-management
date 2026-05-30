@@ -3,10 +3,12 @@ import { AssetRepository } from '@infrastructure/repositories/asset.repository';
 import { CachedAssetRepository } from '@infrastructure/repositories/cached-asset.repository';
 import { CreateAssetDTO, UpdateAssetDTO, AssetQueryDTO } from '@dtos/asset.dto';
 import { authMiddleware, requireRole } from '@middleware/auth.middleware';
+import { idempotencyMiddleware } from '@middleware/idempotency.middleware';
 import { prisma } from '@infrastructure/database/prisma.client';
 import { ERROR_CODES, HTTP_STATUS } from '@constants/error.constants';
 import { sendApiError } from '@domain/errors/error-response';
-import { nextSerialNumber, formatSerialNo } from '@infrastructure/cache/serial-counter';
+import { nextSerialNumber, formatSerialNo, reseedSerialCounter } from '@infrastructure/cache/serial-counter';
+import { getAssetStats } from '@infrastructure/cache/asset-stats.cache';
 
 const CATEGORY_PREFIX: Record<string, string> = {
   'IT設備':   'IT',
@@ -48,6 +50,38 @@ async function generateSerialNo(category: string): Promise<string> {
 
 const assetRepo = new CachedAssetRepository(new AssetRepository());
 
+function isUniqueSerialConstraintError(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const e = err as { code?: string; meta?: { target?: unknown } };
+  if (e.code !== 'P2002') return false;
+  const target = e.meta?.target;
+  if (typeof target === 'string') return target.includes('serialNo');
+  if (Array.isArray(target)) return target.some((t) => String(t).includes('serialNo'));
+  return true;
+}
+
+type AssetCreatePayload = Parameters<typeof assetRepo.create>[0];
+
+async function createWithSerialRetry(
+  category: string,
+  buildPayload: (serialNo: string) => AssetCreatePayload,
+) {
+  const prefix = resolvePrefix(category);
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const serialNo = await generateSerialNo(category);
+    try {
+      return await assetRepo.create(buildPayload(serialNo));
+    } catch (err) {
+      lastErr = err;
+      if (!isUniqueSerialConstraintError(err)) throw err;
+      // Cache drifted behind DB — reseed from MAX(serialNo) and retry.
+      await reseedSerialCounter(prefix);
+    }
+  }
+  throw lastErr ?? new Error('Failed to allocate serial number');
+}
+
 export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.get('/assets', { preHandler: [authMiddleware] }, async (request, reply) => {
     const query = AssetQueryDTO.safeParse(request.query);
@@ -67,6 +101,12 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
     return reply.send(result);
   });
 
+  fastify.get('/assets/stats', { preHandler: [authMiddleware] }, async (request, reply) => {
+    const holderId = request.user.role === 'USER' ? request.user.userId : undefined;
+    const stats = await getAssetStats({ holderId });
+    return reply.send(stats);
+  });
+
   fastify.get('/assets/:id', { preHandler: [authMiddleware] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const asset = await assetRepo.findById(id);
@@ -76,7 +116,7 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
     return reply.send(asset);
   });
 
-  fastify.post('/assets', { preHandler: [authMiddleware, requireRole('ADMIN')] }, async (request, reply) => {
+  fastify.post('/assets', { preHandler: [authMiddleware, requireRole('ADMIN'), idempotencyMiddleware] }, async (request, reply) => {
     const body = CreateAssetDTO.safeParse(request.body);
     if (!body.success) {
       return sendApiError(
@@ -90,15 +130,13 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
 
     const { purchaseDate, startDate, warrantyExpiry, ...rest } = body.data;
 
-    const serialNo = await generateSerialNo(rest.category);
-
-    const asset = await assetRepo.create({
+    const buildPayload = (serialNo: string) => ({
       ...rest,
       serialNo,
       purchaseDate:   purchaseDate   ? new Date(purchaseDate)   : null,
       startDate:      startDate      ? new Date(startDate)      : null,
       warrantyExpiry: warrantyExpiry ? new Date(warrantyExpiry) : null,
-      status: 'AVAILABLE',
+      status: 'AVAILABLE' as const,
       model:         rest.model         ?? null,
       spec:          rest.spec          ?? null,
       supplier:      rest.supplier      ?? null,
@@ -108,6 +146,8 @@ export async function assetRoutes(fastify: FastifyInstance): Promise<void> {
       description:   rest.description   ?? null,
       imageUrls:     rest.imageUrls     ?? [],
     });
+
+    const asset = await createWithSerialRetry(rest.category, buildPayload);
     return reply.status(201).send(asset);
   });
 

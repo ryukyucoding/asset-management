@@ -269,14 +269,10 @@ async function submitRepair() {
 
 async function fetchStatCounts() {
   try {
-    const [avail, pending, repair] = await Promise.all([
-      assetApi.list({ status: 'AVAILABLE',      limit: 1 }),
-      assetApi.list({ status: 'PENDING_REPAIR', limit: 1 }),
-      assetApi.list({ status: 'IN_REPAIR',      limit: 1 }),
-    ])
-    availableCount.value = avail.data.total   ?? 0
-    pendingCount.value   = pending.data.total ?? 0
-    inRepairCount.value  = repair.data.total  ?? 0
+    const res = await assetApi.stats()
+    availableCount.value = res.data.available     ?? 0
+    pendingCount.value   = res.data.pendingRepair ?? 0
+    inRepairCount.value  = res.data.inRepair      ?? 0
   } catch { /* silent */ }
 }
 

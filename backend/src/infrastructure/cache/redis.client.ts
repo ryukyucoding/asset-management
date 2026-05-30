@@ -85,6 +85,15 @@ export async function increment(key: string): Promise<number> {
   return getRedisClient().incr(key);
 }
 
+/** Returns remaining TTL in milliseconds, -1 if no expiry, -2 if key missing. */
+export async function getPttl(key: string): Promise<number> {
+  try {
+    return await getRedisClient().pttl(key);
+  } catch {
+    return -2;
+  }
+}
+
 export async function closeRedisClient(): Promise<void> {
   if (!redisClient) return;
   try {

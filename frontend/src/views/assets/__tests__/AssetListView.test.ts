@@ -6,12 +6,13 @@ import { mountWithPlugins, makeAsset } from '@/test-utils/setup'
 vi.mock('@/apis/asset', () => ({
   assetApi: {
     list: vi.fn(),
+    stats: vi.fn(),
   },
 }))
 
 vi.mock('@/apis/application', () => ({
   applicationApi: {
-    list:   vi.fn().mockResolvedValue({ data: { data: [], total: 0 } }),
+    list: vi.fn().mockResolvedValue({ data: { data: [], total: 0 } }),
     create: vi.fn(),
   },
 }))
@@ -27,15 +28,16 @@ import { assetApi } from '@/apis/asset'
 // ─────────────────────────────────────────────────────────────────────────────
 
 function mockListSuccess(items = [makeAsset()], total = 1) {
-  vi.mocked(assetApi.list).mockImplementation((query = {}) => {
-    const { status, limit } = query
-    // stat-count calls (limit:1 + status filter) return totals derived from items
-    if (limit === 1 && status) {
-      const count = items.filter((a) => a.status === status).length
-      return Promise.resolve({ data: { data: [], total: count } }) as never
-    }
+  vi.mocked(assetApi.list).mockImplementation(() => {
     return Promise.resolve({ data: { data: items, total } }) as never
   })
+  vi.mocked(assetApi.stats).mockResolvedValue({
+    data: {
+      available: items.filter((a) => a.status === 'AVAILABLE').length,
+      pendingRepair: items.filter((a) => a.status === 'PENDING_REPAIR').length,
+      inRepair: items.filter((a) => a.status === 'IN_REPAIR').length,
+    },
+  } as never)
 }
 
 describe('AssetListView', () => {
