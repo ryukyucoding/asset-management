@@ -26,6 +26,7 @@ export default defineConfig({
         'src/domain/entities/**',
         'src/domain/repositories/**',
         'src/constants/**',
+        'src/routes/admin-queue.routes.ts',
       ],
       thresholds: {
         lines: 80,

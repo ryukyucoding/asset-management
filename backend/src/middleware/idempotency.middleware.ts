@@ -36,13 +36,12 @@ export const idempotencyMiddleware: preHandlerHookHandler = async (request, repl
   if (!request.user?.userId) return;
 
   if (headerKey.length > 128 || !/^[A-Za-z0-9._:\-]+$/.test(headerKey)) {
-    sendApiError(
+    return sendApiError(
       reply,
       ERROR_CODES.VALIDATION_ERROR,
       HTTP_STATUS.BAD_REQUEST,
       'Idempotency-Key must be 1-128 chars matching [A-Za-z0-9._:\\-]',
     );
-    return;
   }
 
   const redisKey = redisKeys.idempotency(request.user.userId, headerKey);
@@ -70,7 +69,7 @@ export const idempotencyMiddleware: preHandlerHookHandler = async (request, repl
 
     try {
       const cached = JSON.parse(existing) as CachedResponse;
-      reply
+      return reply
         .status(cached.statusCode)
         .header('content-type', cached.contentType)
         .header('idempotency-replayed', 'true')
