@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../app';
 import { prisma } from '@infrastructure/database/prisma.client';
 import { hashPassword } from '@services/auth/auth.service';
+import { deleteByPattern } from '@infrastructure/cache/redis.client';
 
 const TEST_PREFIX = 'integration-test';
 
@@ -19,6 +20,12 @@ async function resetWorkflowData(): Promise<void> {
   });
   await prisma.asset.deleteMany({ where: { serialNo: { startsWith: TEST_PREFIX } } });
   await prisma.user.deleteMany({ where: { email: { contains: TEST_PREFIX } } });
+  // Flush user-role cache so stale IDs from deleted test users don't survive between tests.
+  await Promise.allSettled([
+    deleteByPattern('cache:user-by-role:*'),
+    deleteByPattern('cache:user:*'),
+    deleteByPattern('cache:users:*'),
+  ]);
 }
 
 async function seedBasicUsers() {
