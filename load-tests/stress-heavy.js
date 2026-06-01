@@ -40,7 +40,7 @@ export function setup() {
   return login(BASE_URL, USER.email, USER.password);
 }
 
-export default function (data) {
+export default function stressHeavyScenario(data) {
   const headers = authHeaders(data.accessToken);
 
   const responses = http.batch([

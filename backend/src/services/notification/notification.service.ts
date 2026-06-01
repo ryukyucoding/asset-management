@@ -36,10 +36,11 @@ export class NotificationService {
   }
 
   async notifyApplicationRejected(userId: string, assetName: string, comment?: string): Promise<void> {
+    const commentSuffix = comment ? `：${comment}` : '';
     await this.notificationRepo.create({
       userId,
       type: 'APPLICATION_REJECTED',
-      message: `你的「${assetName}」維修申請已被拒絕${comment ? `：${comment}` : ''}`,
+      message: `你的「${assetName}」維修申請已被拒絕${commentSuffix}`,
     });
   }
 

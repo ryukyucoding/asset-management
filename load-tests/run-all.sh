@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BASE_URL="${BASE_URL:-http://localhost:3000}"
+# shellcheck source=load-tests/lib/k6-env.sh
+source "${ROOT}/load-tests/lib/k6-env.sh"
 
 run_k6() {
   local script="$1"
@@ -11,11 +13,20 @@ run_k6() {
   echo "==> k6 run ${script}"
   echo "=========================================="
   if command -v k6 >/dev/null 2>&1; then
-    BASE_URL="${BASE_URL}" k6 run "${ROOT}/load-tests/${script}"
+    BASE_URL="${BASE_URL}" \
+    USER_EMAIL="${USER_EMAIL}" \
+    USER_PASSWORD="${USER_PASSWORD}" \
+    ADMIN_EMAIL="${ADMIN_EMAIL}" \
+    ADMIN_PASSWORD="${ADMIN_PASSWORD}" \
+      k6 run "${ROOT}/load-tests/${script}"
   else
     docker run --rm -i \
       --network host \
       -e BASE_URL="${BASE_URL}" \
+      -e USER_EMAIL="${USER_EMAIL}" \
+      -e USER_PASSWORD="${USER_PASSWORD}" \
+      -e ADMIN_EMAIL="${ADMIN_EMAIL}" \
+      -e ADMIN_PASSWORD="${ADMIN_PASSWORD}" \
       -v "${ROOT}/load-tests:/scripts" \
       grafana/k6 run "/scripts/${script}"
   fi

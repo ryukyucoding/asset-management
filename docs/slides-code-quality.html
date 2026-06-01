@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>程式碼品質保證策略 — Asset Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================
+       RESET
+       ============================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    ul { list-style: none; }
+
+    /* ============================================
+       MANDATORY VIEWPORT BASE (from STYLE_PRESETS.md)
+       ============================================ */
+    html, body { height: 100%; overflow-x: hidden; }
+    html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+
+    .slide {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .slide-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-height: 100%;
+      overflow: hidden;
+      padding: var(--slide-padding);
+    }
+
+    /* ============================================
+       DESIGN TOKENS — GitHub Dark + Engineering
+       ============================================ */
+    :root {
+      --title-size:   clamp(1.8rem, 6vw, 4.5rem);
+      --h2-size:      clamp(1.25rem, 3.5vw, 2.4rem);
+      --h3-size:      clamp(0.95rem, 2.2vw, 1.5rem);
+      --body-size:    clamp(0.78rem, 1.4vw, 1rem);
+      --small-size:   clamp(0.65rem, 1vw, 0.82rem);
+      --code-size:    clamp(0.6rem, 1.1vw, 0.82rem);
+
+      --slide-padding: clamp(1.5rem, 5vw, 4.5rem);
+      --gap-lg:        clamp(0.75rem, 2vw, 2rem);
+      --gap-md:        clamp(0.5rem, 1.2vw, 1.25rem);
+      --gap-sm:        clamp(0.3rem, 0.8vw, 0.75rem);
+
+      /* Palette */
+      --bg:           #0a0e1a;
+      --bg-card:      #111827;
+      --bg-code:      #0d1117;
+      --border:       rgba(255, 255, 255, 0.07);
+      --border-hover: rgba(255, 255, 255, 0.14);
+
+      --text:         #e2e8f0;
+      --muted:        #64748b;
+      --dim:          #374151;
+
+      --blue:         #60a5fa;
+      --green:        #34d399;
+      --amber:        #fbbf24;
+      --purple:       #a78bfa;
+      --pink:         #f472b6;
+      --orange:       #fb923c;
+
+      --grad-blue:    linear-gradient(135deg, #1d4ed8, #3b82f6);
+      --grad-green:   linear-gradient(135deg, #059669, #10b981);
+      --grad-purple:  linear-gradient(135deg, #7c3aed, #a78bfa);
+      --grad-amber:   linear-gradient(135deg, #b45309, #f59e0b);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================
+       SHARED ATOMS
+       ============================================ */
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2em 0.7em;
+      border-radius: 999px;
+      font-size: var(--small-size);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      color: var(--muted);
+    }
+    .tag.blue   { border-color: rgba(96,165,250,0.3);  color: var(--blue);   background: rgba(96,165,250,0.08); }
+    .tag.green  { border-color: rgba(52,211,153,0.3);  color: var(--green);  background: rgba(52,211,153,0.08); }
+    .tag.amber  { border-color: rgba(251,191,36,0.3);  color: var(--amber);  background: rgba(251,191,36,0.08); }
+    .tag.purple { border-color: rgba(167,139,250,0.3); color: var(--purple); background: rgba(167,139,250,0.08); }
+    .tag.pink   { border-color: rgba(244,114,182,0.3); color: var(--pink);   background: rgba(244,114,182,0.08); }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: clamp(0.75rem, 1.8vw, 1.4rem);
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: var(--border-hover); }
+
+    .code-block {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: clamp(0.6rem, 1.5vw, 1rem);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--code-size);
+      line-height: 1.75;
+      color: #e6edf3;
+      overflow: hidden;
+    }
+
+    .slide-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--small-size);
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 0.4em;
+    }
+    .slide h2 {
+      font-size: var(--h2-size);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: var(--gap-lg);
+    }
+
+    .bullet-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap-sm);
+    }
+    .bullet-list li {
+      font-size: var(--body-size);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5em;
+      line-height: 1.5;
+    }
+    .bullet-list li::before { content: '▸'; color: var(--blue); flex-shrink: 0; }
+
+    /* decorative grid overlay */
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+
+    /* ============================================
+       REVEAL ANIMATIONS
+       ============================================ */
+    .rv {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .rv.in { opacity: 1; transform: translateY(0); }
+    .rv-l { opacity: 0; transform: translateX(-18px); transition: opacity 0.5s ease, transform 0.5s ease; }
+    .rv-l.in { opacity: 1; transform: translateX(0); }
+    .rv-r { opacity: 0; transform: translateX(18px); transition: opacity 0.5s ease, transform 0.5s ease; }
+    .rv-r.in { opacity: 1; transform: translateX(0); }
+    .d1 { transition-delay: 0.1s; }
+    .d2 { transition-delay: 0.2s; }
+    .d3 { transition-delay: 0.3s; }
+    .d4 { transition-delay: 0.4s; }
+    .d5 { transition-delay: 0.5s; }
+    .d6 { transition-delay: 0.6s; }
+    .d7 { transition-delay: 0.7s; }
+    .d8 { transition-delay: 0.8s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.15s !important; }
+      html { scroll-behavior: auto; }
+      .rv, .rv-l, .rv-r { opacity: 1; transform: none; transition: none; }
+    }
+
+    /* ============================================
+       SLIDE 1 — TITLE
+       ============================================ */
+    #s1 .slide-content {
+      align-items: center;
+      text-align: center;
+      gap: var(--gap-md);
+    }
+    .title-glow {
+      position: absolute;
+      width: 700px; height: 350px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -60%);
+      background: radial-gradient(ellipse, rgba(96,165,250,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .title-eyebrow { display: flex; gap: 0.5em; flex-wrap: wrap; justify-content: center; }
+    .title-main {
+      font-size: var(--title-size);
+      font-weight: 900;
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+    }
+    .title-sub {
+      font-size: clamp(0.85rem, 1.8vw, 1.2rem);
+      color: var(--muted);
+      max-width: 600px;
+      line-height: 1.6;
+    }
+    .title-tags { display: flex; gap: 0.4em; flex-wrap: wrap; justify-content: center; }
+
+    /* ============================================
+       SLIDE 2 — 四道防線
+       ============================================ */
+    .defense-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--gap-md);
+    }
+    .dc {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: clamp(0.75rem, 1.8vw, 1.4rem);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6em;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .dc:hover { transform: translateY(-3px); border-color: var(--border-hover); }
+    .dc::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 12px 12px 0 0;
+    }
+    .dc:nth-child(1)::before { background: var(--grad-blue); }
+    .dc:nth-child(2)::before { background: var(--grad-purple); }
+    .dc:nth-child(3)::before { background: var(--grad-green); }
+    .dc:nth-child(4)::before { background: var(--grad-amber); }
+    .dc-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(1.5rem, 3vw, 2.5rem);
+      font-weight: 700;
+      line-height: 1;
+      opacity: 0.18;
+    }
+    .dc:nth-child(1) .dc-num { color: var(--blue); }
+    .dc:nth-child(2) .dc-num { color: var(--purple); }
+    .dc:nth-child(3) .dc-num { color: var(--green); }
+    .dc:nth-child(4) .dc-num { color: var(--amber); }
+    .dc-icon { font-size: clamp(1.4rem, 2.5vw, 2rem); }
+    .dc-title { font-size: var(--body-size); font-weight: 700; }
+    .dc-desc { font-size: var(--small-size); color: var(--muted); line-height: 1.5; }
+    .dc-tools { display: flex; flex-wrap: wrap; gap: 0.3em; margin-top: auto; }
+
+    /* ============================================
+       SLIDE 3 — TypeScript
+       ============================================ */
+    .split-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(1rem, 3vw, 2.5rem);
+      align-items: start;
+    }
+    .strict-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4em;
+      padding: 0.3em 0.9em;
+      background: rgba(96,165,250,0.1);
+      border: 1px solid rgba(96,165,250,0.3);
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--small-size);
+      color: var(--blue);
+      margin-bottom: var(--gap-md);
+    }
+
+    /* ============================================
+       SLIDE 4 — Linter
+       ============================================ */
+    .linter-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: clamp(0.75rem, 1.8vw, 1.4rem);
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap-sm);
+    }
+    .linter-head {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      padding-bottom: 0.75em;
+      border-bottom: 1px solid var(--border);
+    }
+    .linter-name { font-size: var(--h3-size); font-weight: 700; }
+    .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--small-size);
+      padding: 0.15em 0.5em;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .badge-eslint { color: #7c72e5; background: rgba(124,114,229,0.15); border: 1px solid rgba(124,114,229,0.3); }
+    .badge-rust   { color: #f27642; background: rgba(242,118,66,0.15);  border: 1px solid rgba(242,118,66,0.3); }
+
+    /* ============================================
+       SLIDE 5 — Prettier
+       ============================================ */
+    .prettier-layout {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: clamp(1rem, 3vw, 2.5rem);
+      align-items: center;
+    }
+    .mac-window { background: var(--bg-code); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .mac-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
+      padding: 0.55em 0.9em;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; } .dot-y { background: #febc2e; } .dot-g { background: #28c840; }
+    .filename {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--small-size);
+      color: var(--muted);
+      margin: 0 auto;
+    }
+    .mac-body {
+      padding: clamp(0.75rem, 1.8vw, 1.2rem);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--code-size);
+      line-height: 1.9;
+    }
+    .jk { color: #79c0ff; } .jf { color: #ff7b72; } .jt { color: #3fb950; }
+    .jn { color: #ffa657; } .jp { color: #8b949e; }
+
+    /* ============================================
+       SLIDE 6 — Testing
+       ============================================ */
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--gap-md);
+    }
+    .test-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: clamp(0.75rem, 1.8vw, 1.4rem);
+      display: flex;
+      flex-direction: column;
+      gap: 0.55em;
+    }
+    .test-icon { font-size: clamp(1.4rem, 2.5vw, 2rem); }
+    .test-type { font-size: var(--body-size); font-weight: 700; }
+    .test-stat {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(1.5rem, 3.5vw, 2.8rem);
+      font-weight: 700;
+      line-height: 1;
+    }
+    .cov-bar { height: 4px; background: var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 0.25em; }
+    .cov-fill { height: 100%; border-radius: 999px; background: var(--grad-green); width: 0; transition: width 1s ease 0.4s; }
+
+    /* ============================================
+       SLIDE 7 — CI Pipeline
+       ============================================ */
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+    }
+    .pjob {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: clamp(0.6rem, 1.5vw, 1.2rem);
+      display: flex;
+      flex-direction: column;
+      gap: 0.45em;
+    }
+    .parrow {
+      width: clamp(1.5rem, 3vw, 2.5rem);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.4rem);
+    }
+    .jname { font-size: var(--small-size); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+    .jsteps { display: flex; flex-direction: column; gap: 0.2em; }
+    .jsteps li { font-size: var(--small-size); color: var(--muted); display: flex; align-items: center; gap: 0.35em; }
+    .jsteps li::before { content: '✓'; color: var(--green); flex-shrink: 0; font-size: 0.9em; }
+    .jnote { font-size: var(--small-size); color: var(--muted); }
+
+    /* ============================================
+       SLIDE 8 — Clean Architecture
+       ============================================ */
+    .arch-layers { display: flex; flex-direction: column; }
+    .arch-layer {
+      padding: clamp(0.5rem, 1.4vw, 0.85rem) clamp(0.75rem, 2vw, 1.2rem);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75em;
+      transition: background 0.2s;
+    }
+    .arch-layer:first-child { border-radius: 12px 12px 0 0; }
+    .arch-layer:last-child  { border-radius: 0 0 12px 12px; }
+    .arch-layer + .arch-layer { border-top: none; }
+    .ldot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .lname { font-size: var(--body-size); font-weight: 600; }
+    .lalias { font-family: 'JetBrains Mono', monospace; font-size: var(--small-size); color: var(--muted); }
+    .ldesc { font-size: var(--small-size); color: var(--muted); margin-left: auto; text-align: right; }
+    .l-mw { background: rgba(167,139,250,0.06); border-color: rgba(167,139,250,0.2)!important; }
+    .l-sv { background: rgba(96,165,250,0.06);  border-color: rgba(96,165,250,0.2)!important;  }
+    .l-in { background: rgba(251,191,36,0.06);  border-color: rgba(251,191,36,0.2)!important;  }
+    .l-dm { background: rgba(52,211,153,0.06);  border-color: rgba(52,211,153,0.2)!important;  }
+
+    /* ============================================
+       SLIDE 9 — SUMMARY
+       ============================================ */
+    .sum-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--gap-md);
+    }
+    .sum-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: clamp(0.75rem, 1.8vw, 1.25rem);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75em;
+    }
+    .sum-icon { font-size: clamp(1.2rem, 2.5vw, 1.7rem); flex-shrink: 0; }
+    .sum-t h3 { font-size: var(--body-size); font-weight: 700; margin-bottom: 0.2em; }
+    .sum-t p  { font-size: var(--small-size); color: var(--muted); line-height: 1.5; }
+
+    /* ============================================
+       NAVIGATION CHROME
+       ============================================ */
+    .nav-dots {
+      position: fixed;
+      right: clamp(0.75rem, 2vw, 1.5rem);
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 100;
+    }
+    .ndot {
+      width: 6px; height: 6px;
+      border-radius: 999px;
+      background: var(--dim);
+      cursor: pointer;
+      border: none;
+      padding: 0;
+      transition: all 0.3s ease;
+    }
+    .ndot.active { background: var(--blue); height: 20px; }
+
+    .progress {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      background: var(--blue);
+      transition: width 0.3s ease;
+      z-index: 100;
+      box-shadow: 0 0 8px rgba(96,165,250,0.5);
+    }
+    .counter {
+      position: fixed;
+      bottom: clamp(0.75rem, 2vw, 1.25rem);
+      right: clamp(0.75rem, 2vw, 1.25rem);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--small-size);
+      color: var(--muted);
+      z-index: 100;
+    }
+    .hint {
+      position: fixed;
+      bottom: clamp(0.75rem, 2vw, 1.25rem);
+      left: clamp(0.75rem, 2vw, 1.25rem);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: var(--small-size);
+      color: var(--dim);
+      z-index: 100;
+    }
+
+    /* ============================================
+       RESPONSIVE BREAKPOINTS
+       ============================================ */
+    @media (max-height: 700px) {
+      :root {
+        --slide-padding: clamp(0.75rem, 3vw, 2rem);
+        --gap-lg: clamp(0.4rem, 1.5vw, 1rem);
+        --title-size: clamp(1.3rem, 4.5vw, 2.5rem);
+        --h2-size: clamp(1rem, 3vw, 1.75rem);
+      }
+    }
+    @media (max-height: 600px) {
+      :root {
+        --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem);
+        --gap-lg: clamp(0.3rem, 1vw, 0.75rem);
+        --title-size: clamp(1.1rem, 4vw, 2rem);
+        --body-size: clamp(0.65rem, 1.2vw, 0.9rem);
+      }
+      .nav-dots, .hint { display: none; }
+    }
+    @media (max-height: 500px) {
+      :root {
+        --slide-padding: clamp(0.4rem, 2vw, 1rem);
+        --title-size: clamp(1rem, 3.5vw, 1.5rem);
+        --h2-size: clamp(0.9rem, 2.5vw, 1.25rem);
+        --body-size: clamp(0.6rem, 1vw, 0.82rem);
+      }
+    }
+    @media (max-width: 900px) {
+      .defense-grid { grid-template-columns: repeat(2, 1fr); }
+      .split-2, .prettier-layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      .test-grid { grid-template-columns: 1fr; }
+      .sum-grid  { grid-template-columns: 1fr; }
+      .pipeline  { flex-direction: column; gap: var(--gap-sm); }
+      .parrow    { transform: rotate(90deg); width: 100%; height: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Chrome -->
+  <div class="progress" id="prog"></div>
+  <nav class="nav-dots" id="dots" aria-label="投影片導覽"></nav>
+  <div class="counter" id="ctr">1 / 9</div>
+  <div class="hint">↑ ↓ 或 ← → 切換</div>
+
+  <main id="deck">
+
+    <!-- ====================== SLIDE 1 · TITLE ====================== -->
+    <section class="slide" id="s1" aria-label="標題">
+      <div class="bg-grid"></div>
+      <div class="title-glow"></div>
+      <div class="slide-content" style="align-items:center;text-align:center;gap:var(--gap-md)">
+
+        <div class="title-eyebrow rv">
+          <span class="tag blue">雲原生期末專案</span>
+          <span class="tag">Code Quality</span>
+        </div>
+
+        <h1 class="title-main rv d1">
+          程式碼品質<br>
+          <span style="color:var(--blue)">保證策略</span>
+        </h1>
+
+        <p class="title-sub rv d2">
+          Asset Management — 如何在開發流程中落實 Coding Style、<br>
+          消滅 Code Smells 與 Security Issues
+        </p>
+
+        <div class="title-tags rv d3">
+          <span class="tag">TypeScript</span>
+          <span class="tag">Vue 3</span>
+          <span class="tag">Node.js</span>
+          <span class="tag">PostgreSQL</span>
+          <span class="tag">Redis</span>
+          <span class="tag">GitHub Actions</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================== SLIDE 2 · 四道防線 ====================== -->
+    <section class="slide" id="s2" aria-label="四道防線">
+      <div class="bg-grid"></div>
+      <div class="slide-content">
+
+        <div class="slide-label rv">Overview</div>
+        <h2 class="rv d1">四道 <span style="color:var(--blue)">防線</span></h2>
+
+        <div class="defense-grid">
+          <div class="dc rv d2">
+            <div class="dc-num">01</div>
+            <div class="dc-icon">🔍</div>
+            <div class="dc-title">靜態分析</div>
+            <div class="dc-desc">在編譯期與 Lint 階段找出型別錯誤、潛在 bug 與不安全寫法</div>
+            <div class="dc-tools">
+              <span class="tag blue">TS strict</span>
+              <span class="tag">ESLint</span>
+              <span class="tag">Oxlint</span>
+            </div>
+          </div>
+
+          <div class="dc rv d3">
+            <div class="dc-num">02</div>
+            <div class="dc-icon">🎨</div>
+            <div class="dc-title">格式統一</div>
+            <div class="dc-desc">強制一致的排版風格，消除無意義 diff，讓 review 聚焦邏輯</div>
+            <div class="dc-tools">
+              <span class="tag purple">Prettier</span>
+            </div>
+          </div>
+
+          <div class="dc rv d4">
+            <div class="dc-num">03</div>
+            <div class="dc-icon">🧪</div>
+            <div class="dc-title">測試把關</div>
+            <div class="dc-desc">Unit + Integration + E2E 三層測試，覆蓋率強制 ≥ 80%</div>
+            <div class="dc-tools">
+              <span class="tag green">Vitest</span>
+              <span class="tag green">Playwright</span>
+            </div>
+          </div>
+
+          <div class="dc rv d5">
+            <div class="dc-num">04</div>
+            <div class="dc-icon">🤖</div>
+            <div class="dc-title">CI 門檻</div>
+            <div class="dc-desc">GitHub Actions 自動執行所有檢查，任何一關失敗即阻擋 merge</div>
+            <div class="dc-tools">
+              <span class="tag amber">GitHub Actions</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================== SLIDE 3 · TypeScript ====================== -->
+    <section class="slide" id="s3" aria-label="TypeScript Strict Mode">
+      <div class="bg-grid"></div>
+      <div class="slide-content">
+
+        <div class="slide-label rv">防線一 — 靜態 + 執行期型別安全</div>
+        <h2 class="rv d1">TypeScript <span style="color:var(--blue)">Strict Mode</span> + Zod</h2>
+
+        <div class="split-2">
+          <div>
+            <div class="strict-badge rv d2">✓ &nbsp;"strict": true</div>
+            <ul class="bullet-list rv d3">
+              <li><span><strong>strictNullChecks</strong> — 消滅 null/undefined 執行期崩潰</span></li>
+              <li><span><strong>noImplicitAny</strong> — 禁止隱式 any，強迫明確型別宣告</span></li>
+              <li><span><strong>strictFunctionTypes</strong> — 函式參數逆變型別嚴格檢查</span></li>
+              <li><span><strong>vue-tsc --build</strong> — 對 Vue SFC template 做完整型別驗證</span></li>
+              <li><span><strong>Zod Runtime Validation</strong> — TS 只保護編譯期；Zod 在 API 邊界對所有外部輸入做 schema 驗證，確保<em>執行期</em>型別安全</span></li>
+            </ul>
+          </div>
+
+          <div class="code-block rv-r d2">
+<span style="color:#8b949e">// backend/tsconfig.json</span>
+<span style="color:#e6edf3">{</span>
+  <span style="color:#79c0ff">"compilerOptions"</span><span style="color:#8b949e">: {</span>
+    <span style="color:#79c0ff">"strict"</span><span style="color:#8b949e">:</span> <span style="color:#3fb950">true</span><span style="color:#8b949e">,</span>   <span style="color:#6e7681">// ← 一鍵開啟所有嚴格規則</span>
+    <span style="color:#79c0ff">"target"</span><span style="color:#8b949e">:</span> <span style="color:#a5d6ff">"ES2022"</span><span style="color:#8b949e">,</span>
+    <span style="color:#79c0ff">"module"</span><span style="color:#8b949e">:</span> <span style="color:#a5d6ff">"commonjs"</span><span style="color:#8b949e">,</span>
+    <span style="color:#79c0ff">"paths"</span><span style="color:#8b949e">: {</span>
+      <span style="color:#79c0ff">"@domain/*"</span>         <span style="color:#8b949e">: [</span><span style="color:#a5d6ff">"./src/domain/*"</span><span style="color:#8b949e">],</span>
+      <span style="color:#79c0ff">"@infrastructure/*"</span> <span style="color:#8b949e">: [</span><span style="color:#a5d6ff">"./src/infrastructure/*"</span><span style="color:#8b949e">],</span>
+      <span style="color:#79c0ff">"@services/*"</span>       <span style="color:#8b949e">: [</span><span style="color:#a5d6ff">"./src/services/*"</span><span style="color:#8b949e">]</span>
+    <span style="color:#8b949e">}</span>
+  <span style="color:#8b949e">}</span>
+<span style="color:#e6edf3">}</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================== SLIDE 4 · Linter ====================== -->
+    <section class="slide" id="s4" aria-label="雙層 Linter">
+      <div class="bg-grid"></div>
+      <div class="slide-content">
+
+        <div class="slide-label rv">防線一 — 靜態分析（續）</div>
+        <h2 class="rv d1">雙層 <span style="color:var(--blue)">Linter</span> 架構</h2>
+
+        <div class="split-2">
+
+          <div class="linter-card rv d2">
+            <div class="linter-head">
+              <span class="linter-name">ESLint</span>
+              <span class="badge badge-eslint">v10</span>
+            </div>
+            <ul class="bullet-list">
+              <li><span><strong>eslint-plugin-vue</strong> — Vue 元件最佳實踐</span></li>
+              <li><span><strong>@vue/eslint-config-typescript</strong> — Vue + TS 整合</span></li>
+              <li><span><strong>eslint-plugin-vitest</strong> — 測試程式碼品質</span></li>
+              <li><span><strong>eslint-plugin-playwright</strong> — E2E 測試規範</span></li>
+              <li><span><strong>eslint-config-prettier</strong> — 與 Prettier 避免衝突</span></li>
+            </ul>
+          </div>
+
+          <div class="linter-card rv d3">
+            <div class="linter-head">
+              <span class="linter-name">Oxlint</span>
+              <span class="badge badge-rust">Rust</span>
+              <span class="tag green" style="margin-left:auto">50–100× 更快</span>
+            </div>
+            <ul class="bullet-list">
+              <li><span>以 Rust 編寫，速度比 ESLint 快 <strong>50–100 倍</strong></span></li>
+              <li><span><span class="mono" style="color:var(--amber)">"correctness": "error"</span> — 正確性問題即 CI 失敗</span></li>
+              <li><span>涵蓋 6 個 plugins：eslint, typescript, unicorn, oxc, vue, vitest</span></li>
+            </ul>
+            <div class="code-block" style="margin-top:0.5em">
+<span style="color:#8b949e">// .oxlintrc.json</span>
+<span style="color:#e6edf3">{</span>
+  <span style="color:#79c0ff">"plugins"</span><span style="color:#8b949e">:</span> <span style="color:#e6edf3">[</span><span style="color:#a5d6ff">"eslint"</span><span style="color:#8b949e">,</span> <span style="color:#a5d6ff">"typescript"</span><span style="color:#8b949e">,</span> <span style="color:#a5d6ff">"unicorn"</span><span style="color:#8b949e">,</span> <span style="color:#a5d6ff">"vue"</span><span style="color:#e6edf3">],</span>
+  <span style="color:#79c0ff">"categories"</span><span style="color:#8b949e">: {</span> <span style="color:#79c0ff">"correctness"</span><span style="color:#8b949e">:</span> <span style="color:#a5d6ff">"error"</span> <span style="color:#8b949e">}</span>
+<span style="color:#e6edf3">}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================== SLIDE 5 · Prettier ====================== -->
+    <section class="slide" id="s5" aria-label="Prettier">
+      <div class="bg-grid"></div>
+      <div class="slide-content">
+
+        <div class="slide-label rv">防線二 — 格式統一</div>
+        <h2 class="rv d1">Prettier <span style="color:var(--purple)">格式規範</span></h2>
+
+        <div class="prettier-layout">
+
+          <div class="mac-window rv d2">
+            <div class="mac-bar">
+              <div class="dot dot-r"></div>
+              <div class="dot dot-y"></div>
+              <div class="dot dot-g"></div>
+              <span class="filename">.prettierrc.json</span>
+            </div>
+            <div class="mac-body">
+<span class="jp">{</span>
+  <span class="jk">"semi"</span><span class="jp">:</span>        <span class="jf">false</span><span class="jp">,</span>
+  <span class="jk">"singleQuote"</span><span class="jp">:</span> <span class="jt">true</span><span class="jp">,</span>
+  <span class="jk">"printWidth"</span><span class="jp">:</span>  <span class="jn">100</span>
+<span class="jp">}</span>
+            </div>
+          </div>
+
+          <div class="rv d3" style="display:flex;flex-direction:column;gap:var(--gap-md)">
+            <ul class="bullet-list">
+              <li><span>消除 PR diff 中純格式差異，讓 Code Review <strong>聚焦邏輯</strong>而非排版</span></li>
+              <li><span>前後端統一採用相同風格，零認知負擔切換工作區</span></li>
+              <li><span>搭配 <span class="mono" style="color:var(--blue)">eslint-config-prettier</span> 確保 Linter 不干擾格式化</span></li>
+            </ul>
+
+            <div class="card">
+              <div style="font-size:var(--small-size);color:var(--muted);margin-bottom:0.5em" class="mono">前端 npm scripts</div>
+              <div class="code-block">
+<span style="color:#3fb950">$</span> <span style="color:#e6edf3">pnpm lint:oxlint</span>   <span style="color:#6e7681"># Oxlint fix-in-place</span>
+<span style="color:#3fb950">$</span> <span style="color:#e6edf3">pnpm lint:eslint</span>   <span style="color:#6e7681"># ESLint fix-in-place</span>
+<span style="color:#3fb950">$</span> <span style="color:#e6edf3">pnpm format</span>        <span style="color:#6e7681"># Prettier format</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================== SLIDE 6 · Testing ====================== -->
+    <section class="slide" id="s6" aria-label="測試覆蓋率">
+      <div class="bg-grid"></div>
+      <div class="slide-content">
+
+        <div class="slide-label rv">防線三 — 測試把關</div>
+        <h2 class="rv d1">三層測試，覆蓋率 <span style="color:var(--green)">≥ 80%</span></h2>
+
+        <div class="test-grid">
+
+          <div class="test-card rv d2">
+            <div class="test-icon">
+              <svg viewBox="0 0 100 90" xmlns="http://www.w3.org/2000/svg" style="width:clamp(1.4rem,2.5vw,2rem);height:auto;display:block">
+                <line x1="5" y1="5" x2="50" y2="84" stroke="#FCC72B" stroke-width="14" stroke-linecap="round"/>
+                <line x1="95" y1="5" x2="50" y2="84" stroke="#6BA11E" stroke-width="14" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="test-type">Unit Test</div>
+            <div class="test-stat" style="color:var(--green)">88%+</div>
+            <div class="cov-bar"><div class="cov-fill" data-w="88"></div></div>
+            <ul class="bullet-list" style="margin-top:0.25em">
+              <li><span>Service · Repository · Cache 層</span></li>
+              <li><span>Vue 元件邏輯單元驗證</span></li>
+              <li><span>工具函式與 mapper</span></li>
+            </ul>
+            <div style="margin-top:auto;display:flex;gap:0.3em;flex-wrap:wrap">
+              <span class="tag green">Vitest</span>
+              <span class="tag">coverage-v8</span>
+            </div>
+          </div>
+
+          <div class="test-card rv d3">
+            <div class="test-icon">
+              <svg viewBox="0 0 100 90" xmlns="http://www.w3.org/2000/svg" style="width:clamp(1.4rem,2.5vw,2rem);height:auto;display:block">
+                <line x1="5" y1="5" x2="50" y2="84" stroke="#FCC72B" stroke-width="14" stroke-linecap="round"/>
+                <line x1="95" y1="5" x2="50" y2="84" stroke="#6BA11E" stroke-width="14" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="test-type">Integration Test</div>
+            <div class="test-stat" style="color:var(--blue);font-size:clamp(1rem,2vw,1.6rem)">真實 DB / Cache</div>
+            <ul class="bullet-list" style="margin-top:0.25em">
+              <li><span>真實 PostgreSQL（CI Docker Service）</span></li>
+              <li><span>真實 Redis（CI Docker Service）</span></li>
+              <li><span>API 端到端正確性驗證</span></li>
+              <li><span>每次 CI 自動遷移 schema</span></li>
+            </ul>
+            <div style="margin-top:auto;display:flex;gap:0.3em;flex-wrap:wrap">
+              <span class="tag blue">Vitest</span>
+              <span class="tag blue">app.inject()</span>
+            </div>
+          </div>
+
+          <div class="test-card rv d4">
+            <div class="test-icon">🎭</div>
+            <div class="test-type">E2E Test</div>
+            <div class="test-stat" style="color:var(--purple);font-size:clamp(1rem,2vw,1.6rem)">全端流程</div>
+            <ul class="bullet-list" style="margin-top:0.25em">
+              <li><span>真實前後端 + 資料庫環境</span></li>
+              <li><span>登入、資產管理、通知核心流程</span></li>
+              <li><span>瀏覽器自動化驗收測試</span></li>
+            </ul>
+            <div style="margin-top:auto">
+              <span class="tag purple">Playwright</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================== SLIDE 7 · CI Pipeline ====================== -->
+    <section class="slide" id="s7" aria-label="CI Pipeline">
+      <div class="bg-grid"></div>
+      <div class="slide-content">
+
+        <div class="slide-label rv">防線四 — 自動化門檻</div>
+        <h2 class="rv d1">GitHub Actions <span style="color:var(--amber)">CI Pipeline</span></h2>
+
+        <div class="pipeline rv d2">
+          <div class="pjob" style="border-color:rgba(96,165,250,0.3)">
+            <div class="jname" style="color:var(--blue)">Backend</div>
+            <ul class="jsteps">
+              <li>db:migrate:prod</li>
+              <li>test:coverage</li>
+              <li>test:integration</li>
+              <li>build</li>
+            </ul>
+          </div>
+
+          <div class="parrow">→</div>
+
+          <div class="pjob" style="border-color:rgba(52,211,153,0.3)">
+            <div class="jname" style="color:var(--green)">Frontend</div>
+            <ul class="jsteps">
+              <li>type-check</li>
+              <li>test:unit</li>
+              <li>build</li>
+            </ul>
+          </div>
+
+          <div class="parrow">→</div>
+
+          <div class="pjob" style="border-color:rgba(167,139,250,0.3)">
+            <div class="jname" style="color:var(--purple)">E2E</div>
+            <div class="jnote" style="font-size:var(--small-size);color:var(--muted)">needs: backend + frontend</div>
+            <ul class="jsteps">
+              <li>db:seed</li>
+              <li>playwright test</li>
+            </ul>
+          </div>
+
+          <div class="parrow">→</div>
+
+          <div class="pjob" style="border-color:rgba(251,191,36,0.3)">
+            <div class="jname" style="color:var(--amber)">Docker Build</div>
+            <div class="jnote" style="font-size:var(--small-size);color:var(--muted)">needs: e2e ✓</div>
+            <ul class="jsteps">
+              <li>build backend image</li>
+              <li>build frontend image</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="rv d3" style="margin-top:var(--gap-md);display:flex;align-items:center;gap:var(--gap-md);flex-wrap:wrap">
+          <div class="card" style="flex:1;min-width:200px;padding:0.6em 1em;">
+            <span style="color:var(--amber);font-size:var(--small-size)">⚠&nbsp;</span>
+            <span style="font-size:var(--small-size)">任何 Job 失敗 → Pull Request <strong>無法 Merge</strong></span>
+          </div>
+          <div style="display:flex;gap:0.35em;flex-wrap:wrap">
+            <span class="tag">postgres:16-alpine</span>
+            <span class="tag">redis:7-alpine</span>
+            <span class="tag">Node.js 22</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================== SLIDE 8 · Clean Architecture ====================== -->
+    <section class="slide" id="s8" aria-label="Clean Architecture">
+      <div class="bg-grid"></div>
+      <div class="slide-content">
+
+        <div class="slide-label rv">架構層面</div>
+        <h2 class="rv d1">Clean Architecture <span style="color:var(--blue)">防止 Code Smells</span></h2>
+
+        <div class="split-2">
+
+          <div class="arch-layers rv d2">
+            <div class="arch-layer l-mw">
+              <div class="ldot" style="background:var(--purple)"></div>
+              <div>
+                <div class="lname" style="color:var(--purple)">Middleware</div>
+                <div class="lalias">@middleware/*</div>
+              </div>
+              <div class="ldesc">auth · rate-limit · idempotency</div>
+            </div>
+            <div class="arch-layer l-sv">
+              <div class="ldot" style="background:var(--blue)"></div>
+              <div>
+                <div class="lname" style="color:var(--blue)">Services（Application）</div>
+                <div class="lalias">@services/*</div>
+              </div>
+              <div class="ldesc">業務流程編排</div>
+            </div>
+            <div class="arch-layer l-in">
+              <div class="ldot" style="background:var(--amber)"></div>
+              <div>
+                <div class="lname" style="color:var(--amber)">Infrastructure</div>
+                <div class="lalias">@infrastructure/*</div>
+              </div>
+              <div class="ldesc">DB · Redis · Queue</div>
+            </div>
+            <div class="arch-layer l-dm">
+              <div class="ldot" style="background:var(--green)"></div>
+              <div>
+                <div class="lname" style="color:var(--green)">Domain（Core）</div>
+                <div class="lalias">@domain/*</div>
+              </div>
+              <div class="ldesc">純商業邏輯，零框架依賴</div>
+            </div>
+          </div>
+
+          <div class="rv d3" style="display:flex;flex-direction:column;gap:var(--gap-md)">
+            <p style="font-size:var(--body-size);color:var(--muted)">
+              透過 <strong style="color:var(--text)">路徑別名</strong> 強制分層依賴方向，從根本防止：
+            </p>
+            <ul class="bullet-list">
+              <li><span><strong>God Class</strong> — 每層職責明確，不允許越層存取</span></li>
+              <li><span><strong>循環依賴</strong> — 依賴方向單向（外層 → 內層）</span></li>
+              <li><span><strong>緊耦合</strong> — Domain 只定義 Interface，Infrastructure 實作</span></li>
+              <li><span><strong>難以測試</strong> — 分層讓 Unit Test 可輕鬆注入 Mock 依賴</span></li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================== SLIDE 9 · SUMMARY ====================== -->
+    <section class="slide" id="s9" aria-label="總結">
+      <div class="bg-grid"></div>
+      <div style="position:absolute;width:600px;height:600px;bottom:-150px;right:-100px;background:radial-gradient(circle,rgba(96,165,250,0.09),transparent 70%);pointer-events:none"></div>
+
+      <div class="slide-content">
+
+        <div class="slide-label rv">Summary</div>
+        <h2 class="rv d1">四道防線，<span style="color:var(--blue)">全面把關</span></h2>
+
+        <div class="sum-grid">
+          <div class="sum-card rv d2">
+            <div class="sum-icon">🔍</div>
+            <div class="sum-t">
+              <h3>靜態分析</h3>
+              <p>TypeScript strict + ESLint + Oxlint 在編譯期消滅型別錯誤與潛在 Code Smells</p>
+            </div>
+          </div>
+          <div class="sum-card rv d3">
+            <div class="sum-icon">🎨</div>
+            <div class="sum-t">
+              <h3>格式統一</h3>
+              <p>Prettier 強制一致排版，讓 Code Review 聚焦邏輯而非格式差異</p>
+            </div>
+          </div>
+          <div class="sum-card rv d4">
+            <div class="sum-icon">🧪</div>
+            <div class="sum-t">
+              <h3>測試覆蓋率 ≥ 80%</h3>
+              <p>Unit + 真實 DB Integration + Playwright E2E，確保每次改動不引入 regression</p>
+            </div>
+          </div>
+          <div class="sum-card rv d5">
+            <div class="sum-icon">🤖</div>
+            <div class="sum-t">
+              <h3>CI 自動門檻</h3>
+              <p>GitHub Actions 四個 Job 串聯，任何一關失敗即阻擋 merge，品質保證自動化</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rv d6" style="margin-top:var(--gap-lg);text-align:center">
+          <div class="card" style="display:inline-block;padding:0.6em 1.5em">
+            <span class="mono" style="font-size:var(--small-size);color:var(--muted)">
+              每一次 push 都經過這四道防線 — 品質從第一行程式碼就被保障
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    (function () {
+      const TOTAL = 9;
+      let cur = 0;
+
+      const slides  = document.querySelectorAll('.slide');
+      const prog    = document.getElementById('prog');
+      const ctr     = document.getElementById('ctr');
+      const dotsEl  = document.getElementById('dots');
+
+      /* ── Build nav dots ── */
+      for (let i = 0; i < TOTAL; i++) {
+        const b = document.createElement('button');
+        b.className = 'ndot' + (i === 0 ? ' active' : '');
+        b.setAttribute('aria-label', '投影片 ' + (i + 1));
+        b.addEventListener('click', () => goTo(i));
+        dotsEl.appendChild(b);
+      }
+
+      function ui(idx) {
+        cur = idx;
+        prog.style.width = (idx / (TOTAL - 1) * 100) + '%';
+        ctr.textContent  = (idx + 1) + ' / ' + TOTAL;
+        document.querySelectorAll('.ndot').forEach((d, i) => d.classList.toggle('active', i === idx));
+      }
+
+      function goTo(idx) {
+        if (idx < 0 || idx >= TOTAL) return;
+        slides[idx].scrollIntoView({ behavior: 'smooth' });
+        ui(idx);
+      }
+
+      /* ── Keyboard ── */
+      document.addEventListener('keydown', e => {
+        const fwd = ['ArrowDown','ArrowRight',' ','PageDown'].includes(e.key);
+        const bwd = ['ArrowUp','ArrowLeft','PageUp'].includes(e.key);
+        if (fwd) { e.preventDefault(); goTo(cur + 1); }
+        if (bwd) { e.preventDefault(); goTo(cur - 1); }
+        if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+        if (e.key === 'End')  { e.preventDefault(); goTo(TOTAL - 1); }
+      });
+
+      /* ── Wheel (debounced) ── */
+      let wt = null;
+      document.addEventListener('wheel', e => {
+        e.preventDefault();
+        if (wt) return;
+        goTo(cur + (e.deltaY > 0 ? 1 : -1));
+        wt = setTimeout(() => { wt = null; }, 750);
+      }, { passive: false });
+
+      /* ── Touch ── */
+      let ty0 = 0, tx0 = 0;
+      document.addEventListener('touchstart', e => { ty0 = e.touches[0].clientY; tx0 = e.touches[0].clientX; }, { passive: true });
+      document.addEventListener('touchend', e => {
+        const dy = ty0 - e.changedTouches[0].clientY;
+        const dx = tx0 - e.changedTouches[0].clientX;
+        if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 50) goTo(cur + (dy > 0 ? 1 : -1));
+      }, { passive: true });
+
+      /* ── Intersection Observer — reveals + slide tracking ── */
+      const io = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          /* reveal elements */
+          entry.target.querySelectorAll('.rv, .rv-l, .rv-r').forEach(el => el.classList.add('in'));
+          /* animate coverage bars */
+          entry.target.querySelectorAll('.cov-fill[data-w]').forEach(el => {
+            el.style.width = el.dataset.w + '%';
+          });
+          /* update nav */
+          const idx = Array.from(slides).indexOf(entry.target);
+          if (idx !== -1) ui(idx);
+        });
+      }, { threshold: 0.5 });
+
+      slides.forEach(s => io.observe(s));
+
+      /* ── Boot: trigger slide 1 immediately ── */
+      ui(0);
+      setTimeout(() => slides[0].querySelectorAll('.rv,.rv-l,.rv-r').forEach(el => el.classList.add('in')), 80);
+    })();
+  </script>
+</body>
+</html>

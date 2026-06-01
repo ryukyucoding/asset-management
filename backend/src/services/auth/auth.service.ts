@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import type { IUserRepository } from '@domain/repositories/user.repository.interface';
 import type { ITokenStore } from '@domain/repositories/token-store.interface';

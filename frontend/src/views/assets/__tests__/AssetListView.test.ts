@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { mountWithPlugins, makeAsset } from '@/test-utils/setup'
+import { mockHttpData } from '@/test-utils/api-mock'
 
 // ── Mock API modules ─────────────────────────────────────────────────────────
 vi.mock('@/apis/asset', () => ({
@@ -28,16 +29,16 @@ import { assetApi } from '@/apis/asset'
 // ─────────────────────────────────────────────────────────────────────────────
 
 function mockListSuccess(items = [makeAsset()], total = 1) {
-  vi.mocked(assetApi.list).mockImplementation(() => {
-    return Promise.resolve({ data: { data: items, total } }) as never
-  })
-  vi.mocked(assetApi.stats).mockResolvedValue({
-    data: {
+  vi.mocked(assetApi.list).mockImplementation(() =>
+    Promise.resolve(mockHttpData({ data: items, total })),
+  )
+  vi.mocked(assetApi.stats).mockResolvedValue(
+    mockHttpData({
       available: items.filter((a) => a.status === 'AVAILABLE').length,
       pendingRepair: items.filter((a) => a.status === 'PENDING_REPAIR').length,
       inRepair: items.filter((a) => a.status === 'IN_REPAIR').length,
-    },
-  } as never)
+    }),
+  )
 }
 
 describe('AssetListView', () => {

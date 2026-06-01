@@ -299,6 +299,11 @@ const holderMap = computed<Record<string, string>>(() =>
 )
 const holderInput = ref('')
 
+function formatHolderLabel(user: Pick<UserSummary, 'name' | 'department'>): string {
+  const deptSuffix = user.department ? ` · ${user.department}` : ''
+  return `${user.name}${deptSuffix}`
+}
+
 async function fetchUsers() {
   try { users.value = (await userApi.list()).data } catch { /* silent */ }
 }
@@ -313,7 +318,7 @@ function queryHolders(keyword: string, cb: (results: HolderSuggestion[]) => void
       u.name.toLowerCase().includes(kw) ||
       (u.department ?? '').toLowerCase().includes(kw)
     )
-    .map(u => ({ ...u, label: `${u.name}${u.department ? ' · ' + u.department : ''}`, value: u.name }))
+    .map(u => ({ ...u, label: formatHolderLabel(u), value: u.name }))
   cb(results)
 }
 
@@ -331,7 +336,7 @@ function onHolderBlur() {
   // 若輸入框的文字與已選的 holder 不符（使用者亂改），還原為已選的顯示名稱
   if (form.holderId) {
     const matched = users.value.find(u => u.id === form.holderId)
-    if (matched) holderInput.value = `${matched.name}${matched.department ? ' · ' + matched.department : ''}`
+    if (matched) holderInput.value = formatHolderLabel(matched)
   } else {
     holderInput.value = ''
   }
@@ -434,9 +439,7 @@ function openEditDialog(asset: Asset) {
     imageUrls:      asset.imageUrls     ?? [],
   })
   const holder = users.value.find(u => u.id === asset.holderId)
-  holderInput.value = holder
-    ? `${holder.name}${holder.department ? ' · ' + holder.department : ''}`
-    : ''
+  holderInput.value = holder ? formatHolderLabel(holder) : ''
   formVisible.value = true
 }
 

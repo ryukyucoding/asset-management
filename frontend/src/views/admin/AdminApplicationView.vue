@@ -67,7 +67,7 @@
                     class="photo-item"
                     @click="openViewer(row.imageUrls, idx)"
                   >
-                    <img :src="resolveMediaUrl(url)" class="fault-photo" :alt="t('application.faultPhotos')" />
+                    <img :src="resolveMediaUrl(url)" class="fault-photo" :alt="t('application.faultImageAlt')" />
                     <button class="photo-dl-btn" :title="t('common.download')" @click.stop="downloadPhoto(url, idx + 1)">
                       <el-icon><Download /></el-icon>
                     </button>
@@ -252,7 +252,7 @@
             class="viewer-img"
             :style="{ transform: `scale(${viewerScale}) rotate(${viewerRotate}deg)` }"
             draggable="false"
-            :alt="t('application.faultPhotos')"
+            :alt="t('application.faultImageAlt')"
           />
         </div>
         <button

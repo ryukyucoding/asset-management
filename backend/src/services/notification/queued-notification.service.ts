@@ -1,6 +1,8 @@
-import type { NotificationEntity } from '@domain/repositories/notification.repository.interface';
+import type {
+  INotificationRepository,
+  NotificationEntity,
+} from '@domain/repositories/notification.repository.interface';
 import type { IUserRepository } from '@domain/repositories/user.repository.interface';
-import type { INotificationRepository } from '@domain/repositories/notification.repository.interface';
 import { NotificationService } from './notification.service';
 import { enqueueNotification } from '@infrastructure/queue/notification.queue';
 

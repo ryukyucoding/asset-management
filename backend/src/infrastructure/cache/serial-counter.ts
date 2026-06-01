@@ -37,7 +37,7 @@ async function readMaxSerialFromDb(prefix: string): Promise<number> {
   });
   let maxNum = 0;
   for (const a of existing) {
-    const num = parseInt(a.serialNo.split('-')[1] ?? '0', 10);
+    const num = Number.parseInt(a.serialNo.split('-')[1] ?? '0', 10);
     if (!Number.isNaN(num) && num > maxNum) maxNum = num;
   }
   return maxNum;

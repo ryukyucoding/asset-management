@@ -28,7 +28,7 @@ export function setup() {
   return login(BASE_URL, ADMIN.email, ADMIN.password);
 }
 
-export default function (data) {
+export default function adminReadScenario(data) {
   const headers = authHeaders(data.accessToken);
 
   const all = http.get(`${BASE_URL}/applications?page=1&limit=20`, { headers, tags: { name: 'applications/list' } });

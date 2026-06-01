@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 
 const prisma = new PrismaClient();
 

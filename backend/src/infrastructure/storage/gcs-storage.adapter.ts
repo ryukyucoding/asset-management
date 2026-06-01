@@ -1,6 +1,6 @@
 import { Storage } from '@google-cloud/storage';
-import { extname } from 'path';
-import { randomUUID } from 'crypto';
+import { extname } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import type { MultipartFile } from '@fastify/multipart';
 import type { IStorageAdapter, UploadResult } from './storage.interface';
 
@@ -17,8 +17,8 @@ const UPLOAD_PREFIX = 'uploads/';
  *                                    (not needed on Cloud Run — uses attached SA automatically)
  */
 export class GCSStorageAdapter implements IStorageAdapter {
-  private storage: Storage;
-  private bucketName: string;
+  private readonly storage: Storage;
+  private readonly bucketName: string;
 
   constructor() {
     const bucket = process.env.GCS_BUCKET_NAME;

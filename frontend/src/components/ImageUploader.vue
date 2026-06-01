@@ -7,7 +7,7 @@
         :key="url"
         class="preview-item"
       >
-        <img :src="resolveMediaUrl(url)" alt="uploaded image" class="preview-img" @click="openPreview(url)" />
+        <img :src="resolveMediaUrl(url)" :alt="t('uploader.previewAlt')" class="preview-img" @click="openPreview(url)" />
         <button
           v-if="!readonly"
           type="button"

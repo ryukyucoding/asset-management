@@ -27,6 +27,17 @@ const mockUser = {
   department: '工程部',
 }
 
+type LoginApiResult = Awaited<ReturnType<typeof authApi.login>>
+type RefreshApiResult = Awaited<ReturnType<typeof authApi.refresh>>
+
+function mockLoginResponse(data: LoginApiResult['data']): LoginApiResult {
+  return { data } as LoginApiResult
+}
+
+function mockRefreshResponse(data: RefreshApiResult['data']): RefreshApiResult {
+  return { data } as RefreshApiResult
+}
+
 describe('useAuthStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -56,9 +67,9 @@ describe('useAuthStore', () => {
   // ── login ──────────────────────────────────────────────────────────────────
 
   it('login() stores tokens and user in state + localStorage', async () => {
-    vi.mocked(authApi.login).mockResolvedValue({
-      data: { accessToken: 'at-1', refreshToken: 'rt-1', user: mockUser },
-    } as never)
+    vi.mocked(authApi.login).mockResolvedValue(
+      mockLoginResponse({ accessToken: 'at-1', refreshToken: 'rt-1', user: mockUser }),
+    )
 
     const store = useAuthStore()
     await store.login('user@example.com', 'User1234')
@@ -69,7 +80,9 @@ describe('useAuthStore', () => {
     expect(store.isLoggedIn).toBe(true)
     expect(localStorage.getItem('accessToken')).toBe('at-1')
     expect(localStorage.getItem('refreshToken')).toBe('rt-1')
-    expect(JSON.parse(localStorage.getItem('user')!)).toEqual(mockUser)
+    const storedUser = localStorage.getItem('user')
+    expect(storedUser).not.toBeNull()
+    expect(JSON.parse(storedUser!)).toEqual(mockUser)
   })
 
   it('login() propagates API errors to the caller', async () => {
@@ -83,9 +96,13 @@ describe('useAuthStore', () => {
   // ── isAdmin ────────────────────────────────────────────────────────────────
 
   it('isAdmin is true when role is ADMIN', async () => {
-    vi.mocked(authApi.login).mockResolvedValue({
-      data: { accessToken: 'at', refreshToken: 'rt', user: { ...mockUser, role: 'ADMIN' } },
-    } as never)
+    vi.mocked(authApi.login).mockResolvedValue(
+      mockLoginResponse({
+        accessToken: 'at',
+        refreshToken: 'rt',
+        user: { ...mockUser, role: 'ADMIN' },
+      }),
+    )
 
     const store = useAuthStore()
     await store.login('admin@example.com', 'Admin1234')
@@ -95,9 +112,9 @@ describe('useAuthStore', () => {
   // ── logout ─────────────────────────────────────────────────────────────────
 
   it('logout() clears state, localStorage and redirects to /login', async () => {
-    vi.mocked(authApi.login).mockResolvedValue({
-      data: { accessToken: 'at', refreshToken: 'rt', user: mockUser },
-    } as never)
+    vi.mocked(authApi.login).mockResolvedValue(
+      mockLoginResponse({ accessToken: 'at', refreshToken: 'rt', user: mockUser }),
+    )
 
     const store = useAuthStore()
     await store.login('user@example.com', 'User1234')
@@ -116,7 +133,7 @@ describe('useAuthStore', () => {
   it('refresh() updates accessToken from API response', async () => {
     localStorage.setItem('accessToken', 'old-at')
     localStorage.setItem('refreshToken', 'rt-valid')
-    vi.mocked(authApi.refresh).mockResolvedValue({ data: { accessToken: 'new-at' } } as never)
+    vi.mocked(authApi.refresh).mockResolvedValue(mockRefreshResponse({ accessToken: 'new-at' }))
 
     const store = useAuthStore()
     await store.refresh()

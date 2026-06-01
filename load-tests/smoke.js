@@ -29,7 +29,7 @@ export function setup() {
   return login(BASE_URL, USER.email, USER.password);
 }
 
-export default function (data) {
+export default function smokeScenario(data) {
   const headers = authHeaders(data.accessToken);
 
   const health = http.get(`${BASE_URL}/health`, { tags: { name: 'health' } });

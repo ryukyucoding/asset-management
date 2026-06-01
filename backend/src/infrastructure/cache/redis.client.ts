@@ -47,10 +47,10 @@ export async function getString(key: string): Promise<string | null> {
 export async function setString(key: string, value: string, ttlSeconds?: number): Promise<void> {
   try {
     const redis = getRedisClient();
-    if (ttlSeconds !== undefined) {
-      await redis.set(key, value, 'EX', ttlSeconds);
-    } else {
+    if (ttlSeconds === undefined) {
       await redis.set(key, value);
+    } else {
+      await redis.set(key, value, 'EX', ttlSeconds);
     }
   } catch {
     // Non-fatal when Redis is unavailable.

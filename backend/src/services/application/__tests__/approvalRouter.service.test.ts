@@ -69,7 +69,7 @@ describe('resolveApprovalSteps', () => {
     });
 
     it('returns one ADMIN step when asset is undefined', () => {
-      const steps = resolveApprovalSteps(makeApp(undefined));
+      const steps = resolveApprovalSteps(makeApp());
       expect(steps).toHaveLength(1);
       expect(steps[0].role).toBe('ADMIN');
     });

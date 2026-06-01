@@ -52,7 +52,7 @@ export function getCacheMetrics(): CacheMetricsSnapshot[] {
       namespace: ns,
       hit,
       miss,
-      hitRate: total === 0 ? NaN : hit / total,
+      hitRate: total === 0 ? Number.NaN : hit / total,
     };
   });
 }

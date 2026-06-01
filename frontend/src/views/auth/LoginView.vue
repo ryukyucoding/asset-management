@@ -37,8 +37,9 @@
           @submit.prevent="handleLogin"
         >
           <el-form-item prop="email" class="form-field">
-            <label class="field-label">{{ t('auth.email') }}</label>
+            <label for="login-email" class="field-label">{{ t('auth.email') }}</label>
             <el-input
+              id="login-email"
               v-model="form.email"
               :placeholder="t('auth.emailPlaceholder')"
               size="large"
@@ -47,10 +48,11 @@
           </el-form-item>
 
           <el-form-item prop="password" class="form-field">
-            <label class="field-label">{{ t('auth.password') }}</label>
+            <label for="login-password" class="field-label">{{ t('auth.password') }}</label>
             <el-input
+              id="login-password"
               v-model="form.password"
-              :placeholder="t('auth.passwordPlaceholder')"
+              :placeholder="t('auth.credentialPlaceholder')"
               type="password"
               size="large"
               show-password
@@ -227,8 +229,8 @@ async function handleLogin() {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(22, 119, 255, 0.25);
-  color: #60a5fa;
+  background: rgba(22, 119, 255, 0.55);
+  color: #ffffff;
   font-size: 11px;
   display: flex;
   align-items: center;

@@ -9,7 +9,6 @@ export interface ApprovalStep {
  * 解析維修申請的審批步驟。
  * 目前所有資產皆為 ADMIN 單步審批。
  */
-export function resolveApprovalSteps(application: ApplicationEntity): ApprovalStep[] {
-  void application;
+export function resolveApprovalSteps(_application: ApplicationEntity): ApprovalStep[] {
   return [{ role: 'ADMIN', step: 1 }];
 }

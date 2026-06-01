@@ -37,13 +37,26 @@ export class RedisTokenStore implements ITokenStore {
 
 /** No-op store when Redis is unavailable in tests without mock. */
 export class NoOpTokenStore implements ITokenStore {
-  async storeRefreshToken(): Promise<void> {}
+  async storeRefreshToken(): Promise<void> {
+    await Promise.resolve();
+  }
+
   async hasRefreshToken(): Promise<boolean> {
     return true;
   }
-  async revokeRefreshToken(): Promise<void> {}
-  async revokeAllRefreshTokens(): Promise<void> {}
-  async denyAccessToken(): Promise<void> {}
+
+  async revokeRefreshToken(): Promise<void> {
+    await Promise.resolve();
+  }
+
+  async revokeAllRefreshTokens(): Promise<void> {
+    await Promise.resolve();
+  }
+
+  async denyAccessToken(): Promise<void> {
+    await Promise.resolve();
+  }
+
   async isAccessTokenDenied(): Promise<boolean> {
     return false;
   }

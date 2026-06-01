@@ -1,7 +1,7 @@
-import { createWriteStream, mkdirSync, unlink } from 'fs';
-import { pipeline } from 'stream/promises';
-import { join, extname } from 'path';
-import { randomUUID } from 'crypto';
+import { createWriteStream, mkdirSync, unlink } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
+import { join, extname } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import type { MultipartFile } from '@fastify/multipart';
 import type { IStorageAdapter, UploadResult } from './storage.interface';
 

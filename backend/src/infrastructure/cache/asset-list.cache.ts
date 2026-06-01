@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import type { AssetSearchParams, PaginatedResult } from '@domain/repositories/asset.repository.interface';
 import type { AssetEntity } from '@domain/entities/asset.entity';
 import { getString, setString, deleteByPattern } from './redis.client';
@@ -8,7 +8,7 @@ import { recordCacheHit, recordCacheMiss } from './cache-metrics';
 const ASSET_LIST_CACHE_TTL_SECONDS = 60;
 
 function hashQuery(params: AssetSearchParams): string {
-  const normalized = JSON.stringify(params, Object.keys(params).sort());
+  const normalized = JSON.stringify(params, Object.keys(params).sort((a, b) => a.localeCompare(b)));
   return createHash('sha256').update(normalized).digest('hex').slice(0, 16);
 }
 

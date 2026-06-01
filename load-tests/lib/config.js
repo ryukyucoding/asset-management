@@ -1,13 +1,23 @@
 export const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
 
+function requiredEnv(key) {
+  const value = __ENV[key];
+  if (!value) {
+    throw new Error(
+      `Missing k6 env ${key}. Pass via -e ${key}=... or source load-tests/lib/k6-env.sh before run-all.sh.`,
+    );
+  }
+  return value;
+}
+
 export const USER = {
   email: __ENV.USER_EMAIL || 'user@example.com',
-  password: __ENV.USER_PASSWORD || 'User1234',
+  password: requiredEnv('USER_PASSWORD'),
 };
 
 export const ADMIN = {
   email: __ENV.ADMIN_EMAIL || 'admin@example.com',
-  password: __ENV.ADMIN_PASSWORD || 'Admin1234',
+  password: requiredEnv('ADMIN_PASSWORD'),
 };
 
 export const defaultThresholds = {

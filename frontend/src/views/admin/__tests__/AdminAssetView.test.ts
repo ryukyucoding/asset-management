@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { mountWithPlugins, makeAsset } from '@/test-utils/setup'
+import { mockHttpData } from '@/test-utils/api-mock'
 
 // ── Mock API ──────────────────────────────────────────────────────────────────
 vi.mock('@/apis/asset', () => ({
@@ -31,7 +32,7 @@ import { assetApi } from '@/apis/asset'
 // ─────────────────────────────────────────────────────────────────────────────
 
 function mockListSuccess(items = [makeAsset()], total = 1) {
-  vi.mocked(assetApi.list).mockResolvedValue({ data: { data: items, total } } as never)
+  vi.mocked(assetApi.list).mockResolvedValue(mockHttpData({ data: items, total }))
 }
 
 describe('AdminAssetView', () => {

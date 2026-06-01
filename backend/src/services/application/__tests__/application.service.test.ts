@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ApplicationService } from '../application.service';
+import { prisma } from '@infrastructure/database/prisma.client';
+
+vi.mock('@infrastructure/database/prisma.client', () => ({
+  prisma: { $transaction: vi.fn() },
+}));
 import type { IApplicationRepository } from '@domain/repositories/application.repository.interface';
 import type { IAssetRepository } from '@domain/repositories/asset.repository.interface';
 import type { IApprovalRepository } from '@domain/repositories/approval.repository.interface';
@@ -121,8 +126,12 @@ describe('ApplicationService', () => {
 
   describe('submit', () => {
     it('creates application and marks asset as PENDING_REPAIR', async () => {
-      vi.mocked(mockAssetRepo.findById).mockResolvedValue(makeAsset());
-      vi.mocked(mockApplicationRepo.create).mockResolvedValue(makeApp());
+      const mockTx = {
+        $queryRaw: vi.fn().mockResolvedValue([{ id: ASSET_ID, status: 'AVAILABLE', name: 'MacBook Pro' }]),
+        application: { create: vi.fn().mockResolvedValue(makeApp()) },
+        asset: { update: vi.fn().mockResolvedValue(undefined) },
+      };
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx));
 
       const result = await service.submit('user-1', {
         assetId: ASSET_ID,
@@ -131,12 +140,21 @@ describe('ApplicationService', () => {
       });
 
       expect(result.status).toBe('PENDING');
-      expect(mockAssetRepo.update).toHaveBeenCalledWith(ASSET_ID, { status: 'PENDING_REPAIR' });
+      expect(mockTx.asset.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { status: 'PENDING_REPAIR' } }),
+      );
       expect(mockNotificationService.notifyApplicationSubmitted).toHaveBeenCalledWith('MacBook Pro');
     });
 
     it('throws NOT_FOUND when asset does not exist', async () => {
-      vi.mocked(mockAssetRepo.findById).mockResolvedValue(null);
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+          $queryRaw: vi.fn().mockResolvedValue([]),
+          application: { create: vi.fn() },
+          asset: { update: vi.fn() },
+        };
+        return fn(tx);
+      });
 
       await expect(service.submit('user-1', {
         assetId: ASSET_ID,
@@ -146,7 +164,14 @@ describe('ApplicationService', () => {
     });
 
     it('throws CONFLICT when asset is not available', async () => {
-      vi.mocked(mockAssetRepo.findById).mockResolvedValue(makeAsset({ status: 'IN_REPAIR' }));
+      vi.mocked(prisma.$transaction).mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+        const tx = {
+          $queryRaw: vi.fn().mockResolvedValue([{ id: ASSET_ID, status: 'IN_REPAIR', name: 'MacBook Pro' }]),
+          application: { create: vi.fn() },
+          asset: { update: vi.fn() },
+        };
+        return fn(tx);
+      });
 
       await expect(service.submit('user-1', {
         assetId: ASSET_ID,

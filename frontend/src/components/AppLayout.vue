@@ -184,13 +184,13 @@ async function handleLogout() {
 }
 
 .badge-admin {
-  background: rgba(240, 68, 56, 0.2);
-  color: #fda29b;
+  background: rgba(240, 68, 56, 0.45);
+  color: #ffffff;
 }
 
 .badge-user {
-  background: rgba(22, 119, 255, 0.2);
-  color: #93c5fd;
+  background: rgba(22, 119, 255, 0.45);
+  color: #ffffff;
 }
 
 /* Nav */
@@ -315,8 +315,8 @@ async function handleLogout() {
 }
 
 .logout-btn:hover {
-  color: #ff7875;
-  background: rgba(255,120,117,0.12);
+  color: #ffffff;
+  background: rgba(255, 77, 79, 0.55);
 }
 
 /* ── Top bar ── */

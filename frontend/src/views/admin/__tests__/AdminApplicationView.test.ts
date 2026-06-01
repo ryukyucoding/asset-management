@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { mountWithPlugins, makeApplication } from '@/test-utils/setup'
+import { mockHttpData } from '@/test-utils/api-mock'
 
 // ── Mock API ──────────────────────────────────────────────────────────────────
 vi.mock('@/apis/application', () => ({
@@ -27,7 +28,7 @@ import { applicationApi } from '@/apis/application'
 // ─────────────────────────────────────────────────────────────────────────────
 
 function mockListSuccess(items = [makeApplication()], total = 1) {
-  vi.mocked(applicationApi.list).mockResolvedValue({ data: { data: items, total } } as never)
+  vi.mocked(applicationApi.list).mockResolvedValue(mockHttpData({ data: items, total }))
 }
 
 /** Status-aware mock: KPI calls (limit:1 + status) get their own totals; page calls get items. */
@@ -39,9 +40,9 @@ function mockListByStatus(
   vi.mocked(applicationApi.list).mockImplementation((query = {}) => {
     const { status, limit } = query
     if (limit === 1 && status) {
-      return Promise.resolve({ data: { data: [], total: kpiCounts[status] ?? 0 } }) as never
+      return Promise.resolve(mockHttpData({ data: [], total: kpiCounts[status] ?? 0 }))
     }
-    return Promise.resolve({ data: { data: items, total } }) as never
+    return Promise.resolve(mockHttpData({ data: items, total }))
   })
 }
 

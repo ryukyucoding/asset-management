@@ -27,6 +27,6 @@ http.interceptors.response.use(
         auth.logout()
       }
     }
-    return Promise.reject(error)
+    throw error
   },
 )

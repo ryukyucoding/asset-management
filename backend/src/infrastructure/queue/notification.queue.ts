@@ -21,7 +21,7 @@ function getConnectionOptions() {
   return {
     host: parsed.hostname,
     port: Number(parsed.port) || 6379,
-    maxRetriesPerRequest: null as null,
+    maxRetriesPerRequest: null,
   };
 }
 

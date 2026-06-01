@@ -46,8 +46,7 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
 export function requireRole(...roles: UserRole[]) {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     if (!roles.includes(request.user?.role)) {
-      sendApiError(reply, ERROR_CODES.FORBIDDEN, HTTP_STATUS.FORBIDDEN, 'Insufficient permissions');
-      return;
+      return sendApiError(reply, ERROR_CODES.FORBIDDEN, HTTP_STATUS.FORBIDDEN, 'Insufficient permissions');
     }
   };
 }

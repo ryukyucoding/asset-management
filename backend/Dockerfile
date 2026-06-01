@@ -31,7 +31,10 @@ COPY --from=builder /app/backend/node_modules ./node_modules
 COPY backend/prisma ./prisma
 
 # Create uploads dir (used when STORAGE_DRIVER=local)
-RUN mkdir -p uploads
+RUN mkdir -p uploads && chown -R node:node /app/backend
+
+# Run as non-root user
+USER node
 
 EXPOSE 3000
 

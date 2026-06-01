@@ -25,7 +25,7 @@ export function setup() {
   return login(BASE_URL, USER.email, USER.password);
 }
 
-export default function (data) {
+export default function readHeavyScenario(data) {
   const headers = authHeaders(data.accessToken);
 
   const assets = http.get(`${BASE_URL}/assets?page=1&limit=20`, { headers, tags: { name: 'assets/list' } });

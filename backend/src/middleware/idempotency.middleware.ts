@@ -35,12 +35,12 @@ export const idempotencyMiddleware: preHandlerHookHandler = async (request, repl
   if (!headerKey || typeof headerKey !== 'string') return;
   if (!request.user?.userId) return;
 
-  if (headerKey.length > 128 || !/^[A-Za-z0-9._:\-]+$/.test(headerKey)) {
+  if (headerKey.length > 128 || !/^[A-Za-z0-9._:-]+$/.test(headerKey)) {
     return sendApiError(
       reply,
       ERROR_CODES.VALIDATION_ERROR,
       HTTP_STATUS.BAD_REQUEST,
-      'Idempotency-Key must be 1-128 chars matching [A-Za-z0-9._:\\-]',
+      String.raw`Idempotency-Key must be 1-128 chars matching [A-Za-z0-9._:\-]`,
     );
   }
 

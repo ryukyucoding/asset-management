@@ -32,8 +32,8 @@ async function generateSerialNoFromDb(prefix: string): Promise<string> {
 
   let maxNum = 0;
   for (const a of existing) {
-    const num = parseInt(a.serialNo.split('-')[1] ?? '0', 10);
-    if (!isNaN(num) && num > maxNum) maxNum = num;
+    const num = Number.parseInt(a.serialNo.split('-')[1] ?? '0', 10);
+    if (!Number.isNaN(num) && num > maxNum) maxNum = num;
   }
 
   return formatSerialNo(prefix, maxNum + 1);

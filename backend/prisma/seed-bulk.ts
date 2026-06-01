@@ -32,9 +32,9 @@ function parseArgs(): Options {
     if (arg === '--clear') {
       opts.clear = true;
     } else if (arg === '--assets' && args[i + 1]) {
-      opts.assetCount = Math.max(0, parseInt(args[++i], 10));
+      opts.assetCount = Math.max(0, Number.parseInt(args[++i], 10));
     } else if (arg === '--applications' && args[i + 1]) {
-      opts.applicationCount = Math.max(0, parseInt(args[++i], 10));
+      opts.applicationCount = Math.max(0, Number.parseInt(args[++i], 10));
     }
   }
 
@@ -93,7 +93,7 @@ async function seedAssets(count: number): Promise<void> {
 
   for (let offset = 0; offset < count; offset += BATCH_SIZE) {
     const batchEnd = Math.min(offset + BATCH_SIZE, count);
-    const data = [];
+    const data: ReturnType<typeof buildAssetRow>[] = [];
     for (let i = offset; i < batchEnd; i++) {
       data.push(buildAssetRow(i));
     }
