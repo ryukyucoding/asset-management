@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>ER Diagram — Asset Management System</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    h1 {
+      color: #e2e8f0;
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+    p.sub {
+      color: #64748b;
+      font-size: 13px;
+      margin-bottom: 32px;
+    }
+    .diagram-wrapper {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 32px 40px;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+      max-width: 1100px;
+      width: 100%;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Asset Management System — ER Diagram</h1>
+  <p class="sub">Entity Relationship Diagram · PostgreSQL / Prisma</p>
+
+  <div class="diagram-wrapper">
+    <div class="mermaid">
+erDiagram
+    USER {
+        string id PK
+        string name
+        string email UK
+        string passwordHash
+        string role
+        string department
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    ASSET {
+        string id PK
+        string name
+        string serialNo UK
+        string category
+        string model
+        string spec
+        string supplier
+        datetime purchaseDate
+        float purchaseCost
+        string location
+        string assignedDept
+        datetime startDate
+        datetime warrantyExpiry
+        string status
+        string holderId
+        string[] imageUrls
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    APPLICATION {
+        string id PK
+        string userId FK
+        string assetId FK
+        string status
+        string faultDescription
+        string[] imageUrls
+        datetime repairDate
+        string repairContent
+        string repairSolution
+        float repairCost
+        string repairVendor
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    APPROVAL {
+        string id PK
+        string applicationId FK
+        string approverId FK
+        int step
+        string action
+        string comment
+        datetime createdAt
+    }
+
+    NOTIFICATION {
+        string id PK
+        string userId FK
+        string type
+        string message
+        boolean isRead
+        datetime createdAt
+    }
+
+    AUDIT_LOG {
+        string id PK
+        string actorId
+        string action
+        string entity
+        string entityId
+        json diff
+        string assetId FK
+        datetime createdAt
+    }
+
+    USER ||--o{ APPLICATION : "submits"
+    USER ||--o{ APPROVAL : "approves"
+    USER ||--o{ NOTIFICATION : "receives"
+    ASSET ||--o{ APPLICATION : "requested for"
+    ASSET ||--o{ AUDIT_LOG : "audited by"
+    APPLICATION ||--o{ APPROVAL : "has"
+    </div>
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      er: {
+        diagramPadding: 30,
+        layoutDirection: 'TB',
+        minEntityWidth: 100,
+        minEntityHeight: 75,
+        entityPadding: 15,
+        useMaxWidth: true,
+      },
+      themeVariables: {
+        darkMode: true,
+        background: '#1e293b',
+        primaryColor: '#3b82f6',
+        primaryTextColor: '#e2e8f0',
+        primaryBorderColor: '#60a5fa',
+        lineColor: '#94a3b8',
+        secondaryColor: '#1e40af',
+        tertiaryColor: '#0f172a',
+        edgeLabelBackground: '#1e293b',
+        attributeBackgroundColorEven: '#1e293b',
+        attributeBackgroundColorOdd: '#0f172a',
+      }
+    });
+  </script>
+</body>
+</html>

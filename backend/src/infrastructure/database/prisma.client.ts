@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
+// Pool size: set connection_limit & pool_timeout on DATABASE_URL (see backend/.env.example).
+
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 export const prisma =

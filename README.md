@@ -200,7 +200,7 @@ psql "postgresql://db_user:db_password@127.0.0.1:6543/asset_management" \
 ```bash
 # 5) 清除 BULK 測試資料（只刪 BULK-*）
 cd backend
-DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:6543/asset_management?schema=public&connection_limit=5&pool_timeout=10" \
+DATABASE_URL="postgresql://db_user:db_password@127.0.0.1:6543/asset_management?schema=public" \
   pnpm exec tsx prisma/seed-bulk.ts --clear
 ```
 

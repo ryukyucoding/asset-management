@@ -11,7 +11,7 @@ Required environment variables:
   DB_INSTANCE_CONNECTION_NAME   # project:region:instance
   REDIS_HOST
   REDIS_PORT
-  DATABASE_URL                  # usually points to 127.0.0.1:5432 via Cloud SQL connector
+  DATABASE_URL                  # Cloud SQL connector URL; include connection_limit=5&pool_timeout=10
   GCS_BUCKET_NAME
   CLOUD_RUN_SA                  # service account email
   FRONTEND_URL                  # allowed CORS origin for frontend

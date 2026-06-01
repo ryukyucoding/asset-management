@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    width: 1920px; height: 1080px; overflow: hidden;
+    background: #ffffff;
+    font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+
+  h1 {
+    color: #0f172a; font-size: 30px; font-weight: 700;
+    letter-spacing: 0.4px; margin-bottom: 4px;
+  }
+  .subtitle { color: #64748b; font-size: 13px; margin-bottom: 20px; }
+
+  /* ── stage is exactly 1840 × 940 centred ── */
+  .stage {
+    position: relative;
+    width: 1840px; height: 940px;
+  }
+
+  /* ── SVG lines ── */
+  svg.lines {
+    position: absolute; top:0; left:0;
+    width:100%; height:100%; pointer-events:none; overflow:visible;
+  }
+  .rel-line { fill:none; stroke:#94a3b8; stroke-width:2; }
+  .rel-label { font-family:'Segoe UI',Arial,sans-serif; font-size:12px; fill:#64748b; font-style:italic; }
+
+  /* ── Entity card ── */
+  .entity {
+    position: absolute;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .entity-head {
+    padding: 9px 14px;
+    font-weight: 700; font-size: 13px;
+    letter-spacing: 0.6px; text-transform: uppercase;
+    color: #fff;
+  }
+
+  /* accent colours */
+  .user  .entity-head { background: #2563eb; }
+  .asset .entity-head { background: #0284c7; }
+  .app   .entity-head { background: #d97706; }
+  .approval .entity-head { background: #dc2626; }
+  .notif .entity-head { background: #16a34a; }
+  .audit .entity-head { background: #7c3aed; }
+
+  /* border-top colour strip */
+  .user     { border-top: 3px solid #2563eb; }
+  .asset    { border-top: 3px solid #0284c7; }
+  .app      { border-top: 3px solid #d97706; }
+  .approval { border-top: 3px solid #dc2626; }
+  .notif    { border-top: 3px solid #16a34a; }
+  .audit    { border-top: 3px solid #7c3aed; }
+
+  .field-row {
+    display: flex; align-items: center;
+    padding: 5px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    gap: 8px;
+  }
+  .field-row:last-child { border-bottom: none; }
+  .field-row:nth-child(odd)  { background: #ffffff; }
+  .field-row:nth-child(even) { background: #f8fafc; }
+
+  .ftype {
+    font-size: 10px; color: #94a3b8;
+    width: 54px; flex-shrink: 0;
+    font-variant: small-caps;
+  }
+  .fname { font-size: 12px; color: #1e293b; flex: 1; }
+
+  .ftag {
+    font-size: 9px; font-weight: 700;
+    padding: 1px 5px; border-radius: 3px;
+    letter-spacing: 0.4px;
+  }
+  .pk { background: #fef08a; color: #713f12; border: 1px solid #fde047; }
+  .fk { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+  .uk { background: #dcfce7; color: #14532d; border: 1px solid #86efac; }
+
+  /* ── Legend ── */
+  .legend {
+    position: absolute; bottom: 10px; right: 16px;
+    display: flex; gap: 18px; align-items: center;
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: 6px 14px;
+  }
+  .leg-item { display: flex; align-items: center; gap: 6px; color: #475569; font-size: 11px; }
+</style>
+</head>
+<body>
+<h1>Asset Management System — ER Diagram</h1>
+<p class="subtitle">Entity Relationship · PostgreSQL / Prisma · 6 Tables</p>
+
+<div class="stage">
+
+  <!-- ══════════════════════════════════════════
+       SVG RELATIONSHIP LINES
+       Positions based on actual entity layout below:
+       USER       : left=100, top=80,  w=280
+       APPLICATION: left=780, top=80,  w=290
+       ASSET      : left=1450, top=80, w=280
+       NOTIFICATION: left=100, top=520, w=268
+       APPROVAL   : left=780, top=520, w=268
+       AUDIT_LOG  : left=1450, top=520, w=268
+  ══════════════════════════════════════════ -->
+  <svg class="lines">
+    <defs>
+      <marker id="arrow-many" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+        <path d="M1,1 L9,5 L1,9" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="1" y1="1" x2="1" y2="9" stroke="#94a3b8" stroke-width="1.5"/>
+      </marker>
+      <marker id="arrow-one" markerWidth="10" markerHeight="10" refX="1" refY="5" orient="auto">
+        <line x1="1" y1="1" x2="1" y2="9" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="4" y1="1" x2="4" y2="9" stroke="#94a3b8" stroke-width="1.5"/>
+      </marker>
+    </defs>
+
+    <!-- USER ──submits──> APPLICATION -->
+    <path class="rel-line"
+          d="M 380,200 L 780,200"
+          marker-start="url(#arrow-one)" marker-end="url(#arrow-many)"/>
+    <text class="rel-label" x="540" y="190">submits</text>
+
+    <!-- ASSET ──requested for──> APPLICATION -->
+    <path class="rel-line"
+          d="M 1450,200 L 1070,200"
+          marker-start="url(#arrow-one)" marker-end="url(#arrow-many)"/>
+    <text class="rel-label" x="1160" y="190">requested for</text>
+
+    <!-- USER ──receives──> NOTIFICATION (vertical) -->
+    <path class="rel-line"
+          d="M 240,356 L 240,520"
+          marker-start="url(#arrow-one)" marker-end="url(#arrow-many)"/>
+    <text class="rel-label" x="248" y="446">receives</text>
+
+    <!-- USER ──approves──> APPROVAL (diagonal) -->
+    <path class="rel-line"
+          d="M 380,300 C 580,300 680,560 780,580"
+          marker-start="url(#arrow-one)" marker-end="url(#arrow-many)"/>
+    <text class="rel-label" x="540" y="432">approves</text>
+
+    <!-- APPLICATION ──has──> APPROVAL (vertical) -->
+    <path class="rel-line"
+          d="M 925,430 L 925,520"
+          marker-start="url(#arrow-one)" marker-end="url(#arrow-many)"/>
+    <text class="rel-label" x="932" y="482">has</text>
+
+    <!-- ASSET ──audited by──> AUDIT_LOG (vertical) -->
+    <path class="rel-line"
+          d="M 1590,430 L 1590,520"
+          marker-start="url(#arrow-one)" marker-end="url(#arrow-many)"/>
+    <text class="rel-label" x="1600" y="482">audited by</text>
+  </svg>
+
+  <!-- ══════════════════════════════════════
+       ROW 1
+  ══════════════════════════════════════ -->
+
+  <!-- USER  left=100 top=80 w=280 -->
+  <div class="entity user" style="left:100px; top:80px; width:280px;">
+    <div class="entity-head">👤 User</div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">id</span><span class="ftag pk">PK</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">name</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">email</span><span class="ftag uk">UK</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">passwordHash</span></div>
+    <div class="field-row"><span class="ftype">enum</span><span class="fname">role</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">department</span></div>
+    <div class="field-row"><span class="ftype">datetime</span><span class="fname">createdAt / updatedAt</span></div>
+  </div>
+
+  <!-- APPLICATION  left=780 top=80 w=290 -->
+  <div class="entity app" style="left:780px; top:80px; width:290px;">
+    <div class="entity-head">📋 Application</div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">id</span><span class="ftag pk">PK</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">userId</span><span class="ftag fk">FK</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">assetId</span><span class="ftag fk">FK</span></div>
+    <div class="field-row"><span class="ftype">enum</span><span class="fname">status</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">faultDescription</span></div>
+    <div class="field-row"><span class="ftype">string[]</span><span class="fname">imageUrls</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">repairContent</span></div>
+    <div class="field-row"><span class="ftype">float</span><span class="fname">repairCost</span></div>
+    <div class="field-row"><span class="ftype">datetime</span><span class="fname">createdAt / updatedAt</span></div>
+  </div>
+
+  <!-- ASSET  left=1450 top=80 w=280 -->
+  <div class="entity asset" style="left:1450px; top:80px; width:280px;">
+    <div class="entity-head">📦 Asset</div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">id</span><span class="ftag pk">PK</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">name</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">serialNo</span><span class="ftag uk">UK</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">category</span></div>
+    <div class="field-row"><span class="ftype">enum</span><span class="fname">status</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">location</span></div>
+    <div class="field-row"><span class="ftype">float</span><span class="fname">purchaseCost</span></div>
+    <div class="field-row"><span class="ftype">string[]</span><span class="fname">imageUrls</span></div>
+    <div class="field-row"><span class="ftype">datetime</span><span class="fname">warrantyExpiry</span></div>
+    <div class="field-row"><span class="ftype">datetime</span><span class="fname">createdAt / updatedAt</span></div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       ROW 2  (top=520, clear of all row-1 cards)
+  ══════════════════════════════════════ -->
+
+  <!-- NOTIFICATION  left=100 top=520 -->
+  <div class="entity notif" style="left:100px; top:520px; width:268px;">
+    <div class="entity-head">🔔 Notification</div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">id</span><span class="ftag pk">PK</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">userId</span><span class="ftag fk">FK</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">type</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">message</span></div>
+    <div class="field-row"><span class="ftype">boolean</span><span class="fname">isRead</span></div>
+    <div class="field-row"><span class="ftype">datetime</span><span class="fname">createdAt</span></div>
+  </div>
+
+  <!-- APPROVAL  left=780 top=520 -->
+  <div class="entity approval" style="left:780px; top:520px; width:268px;">
+    <div class="entity-head">✅ Approval</div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">id</span><span class="ftag pk">PK</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">applicationId</span><span class="ftag fk">FK</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">approverId</span><span class="ftag fk">FK</span></div>
+    <div class="field-row"><span class="ftype">int</span><span class="fname">step</span></div>
+    <div class="field-row"><span class="ftype">enum</span><span class="fname">action</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">comment</span></div>
+    <div class="field-row"><span class="ftype">datetime</span><span class="fname">createdAt</span></div>
+  </div>
+
+  <!-- AUDIT_LOG  left=1450 top=520 -->
+  <div class="entity audit" style="left:1450px; top:520px; width:268px;">
+    <div class="entity-head">📝 AuditLog</div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">id</span><span class="ftag pk">PK</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">actorId</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">action</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">entity / entityId</span></div>
+    <div class="field-row"><span class="ftype">json</span><span class="fname">diff</span></div>
+    <div class="field-row"><span class="ftype">string</span><span class="fname">assetId</span><span class="ftag fk">FK</span></div>
+    <div class="field-row"><span class="ftype">datetime</span><span class="fname">createdAt</span></div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="leg-item"><span class="ftag pk" style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:#fef08a;color:#713f12;border:1px solid #fde047">PK</span> Primary Key</div>
+    <div class="leg-item"><span class="ftag fk" style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd">FK</span> Foreign Key</div>
+    <div class="leg-item"><span class="ftag uk" style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:#dcfce7;color:#14532d;border:1px solid #86efac">UK</span> Unique Key</div>
+  </div>
+
+</div>
+</body>
+</html>

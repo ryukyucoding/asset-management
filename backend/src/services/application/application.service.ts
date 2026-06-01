@@ -13,6 +13,8 @@ import type {
 import { AppError } from '@domain/errors/app.errors';
 import { resolveApprovalSteps } from './approvalRouter.service';
 import type { NotificationService } from '@services/notification/notification.service';
+import { prisma } from '@infrastructure/database/prisma.client';
+import { Prisma } from '@prisma/client';
 
 export interface ApplicationActor {
   userId: string;
@@ -46,27 +48,45 @@ export class ApplicationService {
   }
 
   async submit(userId: string, data: CreateApplicationDTOType): Promise<ApplicationEntity> {
-    const asset = await this.assetRepo.findById(data.assetId);
-    if (!asset) throw new AppError('Asset not found', 'NOT_FOUND');
-    if (asset.status !== 'AVAILABLE') {
-      throw new AppError('Asset is not available for repair request', 'CONFLICT');
-    }
+    const includeRelations = {
+      user: { select: { id: true, name: true, email: true, department: true, role: true, createdAt: true, updatedAt: true } },
+      asset: true,
+    } as const;
 
-    const application = await this.applicationRepo.create({
-      userId,
-      assetId: data.assetId,
-      status: 'PENDING',
-      faultDescription: data.faultDescription,
-      imageUrls: data.imageUrls ?? [],
-      repairDate: null,
-      repairContent: null,
-      repairSolution: null,
-      repairCost: null,
-      repairVendor: null,
-    });
+    // SELECT FOR UPDATE locks the asset row; concurrent requests block here until the transaction commits.
+    // Serializable isolation prevents phantom reads if two transactions race on the same asset.
+    const [application, assetName] = await prisma.$transaction(async (tx) => {
+      const [locked] = await tx.$queryRaw<Array<{ id: string; status: string; name: string }>>`
+        SELECT id, status, name FROM "Asset" WHERE id = ${data.assetId} FOR UPDATE
+      `;
 
-    await this.assetRepo.update(data.assetId, { status: 'PENDING_REPAIR' });
-    await this.notificationService.notifyApplicationSubmitted(asset.name);
+      if (!locked) throw new AppError('Asset not found', 'NOT_FOUND');
+      if (locked.status !== 'AVAILABLE') {
+        throw new AppError('Asset is not available for repair request', 'CONFLICT');
+      }
+
+      const created = await tx.application.create({
+        data: {
+          userId,
+          assetId: data.assetId,
+          status: 'PENDING',
+          faultDescription: data.faultDescription,
+          imageUrls: data.imageUrls ?? [],
+          repairDate: null,
+          repairContent: null,
+          repairSolution: null,
+          repairCost: null,
+          repairVendor: null,
+        },
+        include: includeRelations,
+      });
+
+      await tx.asset.update({ where: { id: data.assetId }, data: { status: 'PENDING_REPAIR' } });
+
+      return [created as ApplicationEntity, locked.name] as const;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+    await this.notificationService.notifyApplicationSubmitted(assetName);
 
     return application;
   }
