@@ -113,7 +113,7 @@ const ko: MessageSchema = {
     faultDescMin: '고장 설명은 최소 5자 이상이어야 합니다',
     submitSuccess: '수리 신청이 제출되었습니다. 관리자 검토를 기다려 주세요',
     submitRepairTitle: '수리 신청: {name}',
-    faultImageAlt: '고장',
+    faultThumbAlt: '고장',
     faultPhotos: '고장 상태',
     requestInfo: '신청 정보',
     repairProgress: '수리 진행',

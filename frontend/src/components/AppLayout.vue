@@ -184,12 +184,12 @@ async function handleLogout() {
 }
 
 .badge-admin {
-  background: rgba(240, 68, 56, 0.45);
+  background: #cf1322;
   color: #ffffff;
 }
 
 .badge-user {
-  background: rgba(22, 119, 255, 0.45);
+  background: #0958d9;
   color: #ffffff;
 }
 
@@ -269,8 +269,8 @@ async function handleLogout() {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1677ff, #4096ff);
-  color: #fff;
+  background: #0958d9;
+  color: #ffffff;
   font-size: 13px;
   font-weight: 700;
   display: flex;
@@ -316,7 +316,7 @@ async function handleLogout() {
 
 .logout-btn:hover {
   color: #ffffff;
-  background: rgba(255, 77, 79, 0.55);
+  background: #cf1322;
 }
 
 /* ── Top bar ── */

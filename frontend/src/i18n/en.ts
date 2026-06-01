@@ -114,7 +114,7 @@ const en: MessageSchema = {
     faultDescMin: 'Fault description must be at least 5 characters',
     submitSuccess: 'Repair request submitted, awaiting admin review',
     submitRepairTitle: 'Submit Repair Request: {name}',
-    faultImageAlt: 'Fault',
+    faultThumbAlt: 'Fault',
     faultPhotos: 'Fault detail',
     requestInfo: 'Request Info',
     repairProgress: 'Repair Progress',

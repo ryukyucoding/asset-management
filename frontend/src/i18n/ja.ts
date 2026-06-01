@@ -113,7 +113,7 @@ const ja: MessageSchema = {
     faultDescMin: '故障説明は5文字以上必要です',
     submitSuccess: '修理申請が送信されました。管理者の審査をお待ちください',
     submitRepairTitle: '修理申請：{name}',
-    faultImageAlt: '故障',
+    faultThumbAlt: '故障',
     faultPhotos: '故障状況',
     requestInfo: '申請情報',
     repairProgress: '修理進捗',

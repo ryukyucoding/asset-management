@@ -4,9 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>程式碼品質保證策略 — Asset Management</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
   <style>
     /* ============================================
        RESET
@@ -83,7 +80,7 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: system-ui, 'Segoe UI', sans-serif;
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
     }
@@ -91,7 +88,7 @@
     /* ============================================
        SHARED ATOMS
        ============================================ */
-    .mono { font-family: 'JetBrains Mono', monospace; }
+    .mono { font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace; }
 
     .tag {
       display: inline-flex;
@@ -99,7 +96,7 @@
       padding: 0.2em 0.7em;
       border-radius: 999px;
       font-size: var(--small-size);
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
       font-weight: 500;
       border: 1px solid var(--border);
       background: rgba(255,255,255,0.03);
@@ -125,7 +122,7 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: clamp(0.6rem, 1.5vw, 1rem);
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
       font-size: var(--code-size);
       line-height: 1.75;
       color: #e6edf3;
@@ -133,7 +130,7 @@
     }
 
     .slide-label {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
       font-size: var(--small-size);
       color: var(--muted);
       text-transform: uppercase;
@@ -264,7 +261,7 @@
     .dc:nth-child(3)::before { background: var(--grad-green); }
     .dc:nth-child(4)::before { background: var(--grad-amber); }
     .dc-num {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
       font-size: clamp(1.5rem, 3vw, 2.5rem);
       font-weight: 700;
       line-height: 1;
@@ -296,7 +293,7 @@
       background: rgba(96,165,250,0.1);
       border: 1px solid rgba(96,165,250,0.3);
       border-radius: 6px;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
       font-size: var(--small-size);
       color: var(--blue);
       margin-bottom: var(--gap-md);
@@ -323,14 +320,14 @@
     }
     .linter-name { font-size: var(--h3-size); font-weight: 700; }
     .badge {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
       font-size: var(--small-size);
       padding: 0.15em 0.5em;
       border-radius: 4px;
       font-weight: 600;
     }
-    .badge-eslint { color: #7c72e5; background: rgba(124,114,229,0.15); border: 1px solid rgba(124,114,229,0.3); }
-    .badge-rust   { color: #f27642; background: rgba(242,118,66,0.15);  border: 1px solid rgba(242,118,66,0.3); }
+    .badge-eslint { color: #e0e7ff; background: #4338ca; border: 1px solid #6366f1; }
+    .badge-rust   { color: #fff7ed; background: #c2410c; border: 1px solid #ea580c; }
 
     /* ============================================
        SLIDE 5 — Prettier
@@ -353,14 +350,14 @@
     .dot { width: 10px; height: 10px; border-radius: 50%; }
     .dot-r { background: #ff5f57; } .dot-y { background: #febc2e; } .dot-g { background: #28c840; }
     .filename {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
       font-size: var(--small-size);
       color: var(--muted);
       margin: 0 auto;
     }
     .mac-body {
       padding: clamp(0.75rem, 1.8vw, 1.2rem);
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
       font-size: var(--code-size);
       line-height: 1.9;
     }
@@ -387,7 +384,7 @@
     .test-icon { font-size: clamp(1.4rem, 2.5vw, 2rem); }
     .test-type { font-size: var(--body-size); font-weight: 700; }
     .test-stat {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
       font-size: clamp(1.5rem, 3.5vw, 2.8rem);
       font-weight: 700;
       line-height: 1;
@@ -445,7 +442,7 @@
     .arch-layer + .arch-layer { border-top: none; }
     .ldot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
     .lname { font-size: var(--body-size); font-weight: 600; }
-    .lalias { font-family: 'JetBrains Mono', monospace; font-size: var(--small-size); color: var(--muted); }
+    .lalias { font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace; font-size: var(--small-size); color: var(--muted); }
     .ldesc { font-size: var(--small-size); color: var(--muted); margin-left: auto; text-align: right; }
     .l-mw { background: rgba(167,139,250,0.06); border-color: rgba(167,139,250,0.2)!important; }
     .l-sv { background: rgba(96,165,250,0.06);  border-color: rgba(96,165,250,0.2)!important;  }
@@ -510,7 +507,7 @@
       position: fixed;
       bottom: clamp(0.75rem, 2vw, 1.25rem);
       right: clamp(0.75rem, 2vw, 1.25rem);
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
       font-size: var(--small-size);
       color: var(--muted);
       z-index: 100;
@@ -519,7 +516,7 @@
       position: fixed;
       bottom: clamp(0.75rem, 2vw, 1.25rem);
       left: clamp(0.75rem, 2vw, 1.25rem);
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
       font-size: var(--small-size);
       color: var(--dim);
       z-index: 100;

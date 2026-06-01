@@ -47,7 +47,7 @@
                     :key="url"
                     :src="resolveMediaUrl(url)"
                     class="fault-photo"
-                    :alt="t('application.faultImageAlt')"
+                    :alt="t('application.faultThumbAlt')"
                     @click="openViewer(row.imageUrls, idx)"
                   />
                 </div>
@@ -164,7 +164,7 @@
           class="viewer-img"
           :style="{ transform: `scale(${viewerScale}) rotate(${viewerRotate}deg)` }"
           draggable="false"
-          :alt="t('application.faultImageAlt')"
+          :alt="t('application.faultThumbAlt')"
         />
       </div>
 

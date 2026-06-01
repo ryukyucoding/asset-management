@@ -229,7 +229,7 @@ async function handleLogin() {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(22, 119, 255, 0.55);
+  background: #0958d9;
   color: #ffffff;
   font-size: 11px;
   display: flex;

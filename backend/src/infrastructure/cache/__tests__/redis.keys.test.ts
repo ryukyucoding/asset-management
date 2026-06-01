@@ -3,8 +3,10 @@ import { redisKeys, REDIS_KEY_PREFIXES } from '../redis.keys';
 
 describe('redisKeys', () => {
   it('builds namespaced keys', () => {
-    const testIp = '1.2.3.4';
-    expect(redisKeys.rateLimitAuthLogin(testIp)).toBe(`rate-limit:auth-login:${testIp}`);
+    const sampleClientId = 'login-rate-limit-test-client';
+    expect(redisKeys.rateLimitAuthLogin(sampleClientId)).toBe(
+      `rate-limit:auth-login:${sampleClientId}`,
+    );
     expect(redisKeys.refresh('u1', 'jti-abc')).toBe('refresh:u1:jti-abc');
     expect(redisKeys.tokenDeny('jti-abc')).toBe('token-deny:jti-abc');
     expect(redisKeys.cacheAssets('abc123')).toBe('cache:assets:abc123');

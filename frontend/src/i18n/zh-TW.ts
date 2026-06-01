@@ -111,7 +111,7 @@ export default {
     faultDescMin: '故障描述至少 5 個字',
     submitSuccess: '維修申請已提交，等待管理員審核',
     submitRepairTitle: '提交維修申請：{name}',
-    faultImageAlt: '故障狀況',
+    faultThumbAlt: '故障狀況',
     faultPhotos: '故障狀況',
     requestInfo: '申請資訊',
     repairProgress: '維修進度',

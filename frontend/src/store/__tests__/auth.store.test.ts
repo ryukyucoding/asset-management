@@ -81,8 +81,8 @@ describe('useAuthStore', () => {
     expect(localStorage.getItem('accessToken')).toBe('at-1')
     expect(localStorage.getItem('refreshToken')).toBe('rt-1')
     const storedUser = localStorage.getItem('user')
-    expect(storedUser).not.toBeNull()
-    expect(JSON.parse(storedUser!)).toEqual(mockUser)
+    if (storedUser === null) throw new Error('expected user in localStorage')
+    expect(JSON.parse(storedUser)).toEqual(mockUser)
   })
 
   it('login() propagates API errors to the caller', async () => {
