@@ -56,29 +56,24 @@ jobs:
           IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/backend:${GITHUB_SHA}"
           JOB_NAME="${BACKEND_SERVICE}-migrate"
 
-          gcloud run jobs create "${JOB_NAME}" \
-            --image "${IMAGE}" \
-            --region "${REGION}" \
-            --service-account "${CLOUD_RUN_SA}" \
-            --add-cloudsql-instances "${DB_INSTANCE_CONNECTION_NAME}" \
-            --set-env-vars "DATABASE_URL=${DATABASE_URL}" \
-            --vpc-connector "${VPC_CONNECTOR}" \
-            --vpc-egress "${VPC_EGRESS:-private-ranges-only}" \
-            --command "npx" \
-            --args "prisma,migrate,deploy" \
-            --max-retries 0 \
-            2>/dev/null \
-          || gcloud run jobs update "${JOB_NAME}" \
-            --image "${IMAGE}" \
-            --region "${REGION}" \
-            --service-account "${CLOUD_RUN_SA}" \
-            --add-cloudsql-instances "${DB_INSTANCE_CONNECTION_NAME}" \
-            --set-env-vars "DATABASE_URL=${DATABASE_URL}" \
-            --vpc-connector "${VPC_CONNECTOR}" \
-            --vpc-egress "${VPC_EGRESS:-private-ranges-only}" \
-            --command "npx" \
-            --args "prisma,migrate,deploy" \
+          JOB_FLAGS=(
+            --image "${IMAGE}"
+            --region "${REGION}"
+            --service-account "${CLOUD_RUN_SA}"
+            --add-cloudsql-instances "${DB_INSTANCE_CONNECTION_NAME}"
+            --set-env-vars "DATABASE_URL=${DATABASE_URL}"
+            --vpc-connector "${VPC_CONNECTOR}"
+            --vpc-egress "${VPC_EGRESS:-private-ranges-only}"
+            --command "npx"
+            --args "prisma,migrate,deploy"
             --max-retries 0
+          )
+
+          if gcloud run jobs describe "${JOB_NAME}" --region "${REGION}" --format='value(name)' &>/dev/null; then
+            gcloud run jobs update "${JOB_NAME}" "${JOB_FLAGS[@]}"
+          else
+            gcloud run jobs create "${JOB_NAME}" "${JOB_FLAGS[@]}"
+          fi
 
           gcloud run jobs execute "${JOB_NAME}" --region "${REGION}" --wait
 
