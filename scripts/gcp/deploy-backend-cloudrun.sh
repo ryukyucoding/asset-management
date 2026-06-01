@@ -43,7 +43,7 @@ gcloud run deploy "${BACKEND_SERVICE}" \
   --platform managed \
   --allow-unauthenticated \
   --service-account "${CLOUD_RUN_SA}" \
-  --add-cloudsql-instances "${DB_INSTANCE_CONNECTION_NAME}" \
+  --set-cloudsql-instances "${DB_INSTANCE_CONNECTION_NAME}" \
   --min-instances 1 \
   --max-instances 20 \
   --concurrency 80 \
