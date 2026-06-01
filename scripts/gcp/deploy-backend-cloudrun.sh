@@ -36,7 +36,7 @@ docker build -f backend/Dockerfile -t "${IMAGE}" .
 echo "==> Push backend image"
 docker push "${IMAGE}"
 
-echo "==> Deploy backend service"
+echo "==> Deploy backend service (no traffic until migration succeeds)"
 gcloud run deploy "${BACKEND_SERVICE}" \
   --image "${IMAGE}" \
   --region "${REGION}" \
@@ -51,6 +51,7 @@ gcloud run deploy "${BACKEND_SERVICE}" \
   --startup-probe=httpGet.path=/health,httpGet.port=3000,initialDelaySeconds=5,timeoutSeconds=3,periodSeconds=10,failureThreshold=3 \
   --vpc-connector "${VPC_CONNECTOR}" \
   --vpc-egress "${VPC_EGRESS}" \
+  --no-traffic \
   --set-env-vars "NODE_ENV=production,DATABASE_URL=${DATABASE_URL},REDIS_URL=redis://${REDIS_HOST}:${REDIS_PORT},STORAGE_DRIVER=gcs,GCS_BUCKET_NAME=${GCS_BUCKET_NAME},FRONTEND_URL=${FRONTEND_URL}" \
   --set-secrets "JWT_SECRET=jwt-secret:latest,JWT_REFRESH_SECRET=jwt-refresh-secret:latest"
 
