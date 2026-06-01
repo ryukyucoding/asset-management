@@ -57,7 +57,7 @@ export class ApplicationService {
     // Serializable isolation prevents phantom reads if two transactions race on the same asset.
     const [application, assetName] = await prisma.$transaction(async (tx) => {
       const [locked] = await tx.$queryRaw<Array<{ id: string; status: string; name: string }>>`
-        SELECT id, status, name FROM "Asset" WHERE id = ${data.assetId} FOR UPDATE
+        SELECT id, status, name FROM "assets" WHERE id = ${data.assetId} FOR UPDATE
       `;
 
       if (!locked) throw new AppError('Asset not found', 'NOT_FOUND');
